@@ -4,6 +4,7 @@ Django settings for review_compliance project.
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,16 +37,17 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
 
-    # Local Apps
-    'apps.accounts',
-    'apps.imports',
-    'apps.cases',
-    'apps.audit',
-    'apps.dashboard',
+    # Local Apps (Removed 'apps.' prefix to match your root folder structure)
+    'accounts',
+    'imports',
+    'cases',
+    'audit',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Added for production static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -53,7 +55,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Custom Audit Middleware (Must be after AuthenticationMiddleware)
-    'apps.audit.middleware.AuditMiddleware',
+    'audit.middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'review_compliance.urls'
@@ -78,13 +80,15 @@ WSGI_APPLICATION = 'review_compliance.wsgi.application'
 
 
 # ==========================================
-# DATABASE (SQLITE FOR LOCAL TESTING)
+# DATABASE (SQLITE FOR LOCAL / RENDER DATABASE_URL FOR PROD)
 # ==========================================
+# This automatically uses SQLite locally, but switches to PostgreSQL on Render 
+# if you provide the DATABASE_URL environment variable.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
+    )
 }
 
 
@@ -110,7 +114,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 
 # Custom Authentication Backend (For IP tracking & Lockout)
 AUTHENTICATION_BACKENDS = [
-    'apps.accounts.backends.CustomAuthBackend',
+    'accounts.backends.CustomAuthBackend',
     'django.contrib.auth.backends.ModelBackend', # Fallback
 ]
 
@@ -128,6 +132,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# WhiteNoise storage for production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (Uploaded CSVs)
 MEDIA_URL = 'media/'
