@@ -9,6 +9,13 @@ set -o pipefail  # catch pipe errors
 echo "🚀 Starting Review Compliance build..."
 
 # ------------------------------------------------------------------
+# 0. Fix Render static directory warning
+# ------------------------------------------------------------------
+echo "📁 Ensuring static directory exists..."
+mkdir -p static
+touch static/.gitkeep
+
+# ------------------------------------------------------------------
 # 1. Install dependencies
 # ------------------------------------------------------------------
 echo "📦 Installing dependencies..."
@@ -29,58 +36,58 @@ echo "🎨 Collecting static files..."
 python manage.py collectstatic --noinput
 
 # ------------------------------------------------------------------
-# 4. Idempotent superuser creation
-#    Only creates if it doesn't already exist.
+# 4. Idempotent user creation for ALL roles
 # ------------------------------------------------------------------
-echo "👤 Ensuring superuser exists..."
+echo "👤 Ensuring all default role accounts exist..."
 python manage.py shell << 'PYEOF'
 import os
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
-email    = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@reviewcompliance.com')
-password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+# Fetch master password from environment (fallback for local testing)
+password = os.environ.get('DJANGO_SUPERUSER_PASSWORD', 'Admin@12345!')
 
-if not password:
-    print('⚠️  DJANGO_SUPERUSER_PASSWORD not set — skipping superuser creation.')
-else:
+# List of users to create: (username, email, role, is_staff, is_superuser)
+users_to_create = [
+    ('admin', 'admin@reviewcompliance.com', 'ADMIN', True, True),
+    ('reviewer1', 'reviewer@reviewcompliance.com', 'REVIEWER', False, False),
+    ('submitter1', 'submitter@reviewcompliance.com', 'SUBMITTER', False, False),
+    ('client1', 'client@reviewcompliance.com', 'CLIENT', False, False),
+]
+
+for username, email, role, is_staff, is_superuser in users_to_create:
     user, created = User.objects.get_or_create(
         username=username,
         defaults={
             'email': email,
-            'role': 'ADMIN',           # Matches your CustomUser ROLE_CHOICES
-            'is_staff': True,
-            'is_superuser': True,
+            'role': role,
+            'is_staff': is_staff,
+            'is_superuser': is_superuser,
         },
     )
+    
     if created:
         user.set_password(password)
         user.save()
-        print(f'✅ Superuser created: {username}')
+        print(f'✅ Created {role}: {username}')
     else:
+        # Update existing user to ensure role/password are correct
         changed = False
-        if not user.is_staff:
-            user.is_staff = True; changed = True
-        if not user.is_superuser:
-            user.is_superuser = True; changed = True
-        if user.role != 'ADMIN':
-            user.role = 'ADMIN'; changed = True
-        if password:
+        if user.role != role:
+            user.role = role; changed = True
+        if user.is_staff != is_staff:
+            user.is_staff = is_staff; changed = True
+        if user.is_superuser != is_superuser:
+            user.is_superuser = is_superuser; changed = True
+        if not user.check_password(password):
             user.set_password(password); changed = True
+            
         if changed:
             user.save()
-            print(f'✅ Superuser {username} updated.')
+            print(f'✅ Updated {role}: {username}')
         else:
-            print(f'ℹ️  Superuser {username} already exists — no changes.')
+            print(f'ℹ️  {role} {username} already exists — no changes.')
 PYEOF
-
-# ------------------------------------------------------------------
-# 5. (Optional) Seed initial data
-#    Only runs if you create a custom management command later.
-# ------------------------------------------------------------------
-# echo "🌱 Seeding initial data..."
-# python manage.py seed_data || echo "⚠️  Seeding skipped (data may already exist)"
 
 echo "✅ Build completed successfully."
