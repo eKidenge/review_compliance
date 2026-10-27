@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Case #{{ case.id }} Details</h2>
+    <span class="badge bg-secondary fs-5">{{ case.get_status_display }}</span>
+</div>
+<hr>
+
+<div class="row mt-4">
+    <!-- Left Column: Case Info -->
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Target Information</div>
+            <div class="card-body">
+                <p><strong>URL:</strong> <a href="{{ case.canonical_url }}" target="_blank">{{ case.canonical_url }}</a></p>
+                <p><strong>Business:</strong> {{ case.business_label|default:"N/A" }}</p>
+                <p><strong>Imported:</strong> {{ case.created_at }}</p>
+            </div>
+        </div>
+
+        {% if case.assessment %}
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">Policy Assessment</div>
+            <div class="card-body">
+                <p><strong>Category:</strong> {{ case.assessment.category }}</p>
+                <p><strong>Rationale:</strong> {{ case.assessment.rationale }}</p>
+                <p><strong>Decision:</strong> {{ case.assessment.decision }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Action Forms -->
+    <div class="col-md-6">
+        {% if case.status == 'NEEDS_TRIAGE' and user.role in 'ADMIN,REVIEWER' %}
+        <div class="card mb-3">
+            <div class="card-header">Triage Assessment</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'submit_assessment' case.id %}">
+                    {% csrf_token %}
+                    {{ assessment_form.as_p }}
+                    <button type="submit" class="btn btn-primary">Save Assessment</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if case.status == 'ELIGIBLE' and user.role == 'ADMIN' %}
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white">Approval Required</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'approve_case' case.id %}">
+                    {% csrf_token %}
+                    {{ approval_form.as_p }}
+                    <button type="submit" class="btn btn-success">Approve Case</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if case.status == 'APPROVED' and user.role in 'ADMIN,SUBMITTER' %}
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white">Record Submission</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'record_submission' case.id %}">
+                    {% csrf_token %}
+                    {{ submission_form.as_p }}
+                    <button type="submit" class="btn btn-primary">Record Receipt</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Submitter Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-send-check me-2"></i>Submission Workspace</h2>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        {% include 'dashboard/partials/stat_card.html' with title="Ready for Submission" value=ready_for_submission_count icon="box-arrow-up" color="primary" subtitle="Approved cases waiting for manual submission" %}
+    </div>
+    <div class="col-md-6">
+        {% include 'dashboard/partials/stat_card.html' with title="My Total Submissions" value=my_submissions_count icon="send-check" color="success" subtitle="Reports you have submitted" %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Action Queue -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-lightning-charge me-2"></i>Action Queue</h5>
+                <a href="{% url 'cases:case_list' %}?status=APPROVED" class="btn btn-sm btn-outline-primary">View Full List</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Business</th>
+                                <th>URL</th>
+                                <th>Approved On</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in submission_queue %}
+                            <tr>
+                                <td>{{ case.business_label|default:"Unknown" }}</td>
+                                <td><a href="{{ case.canonical_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">{{ case.canonical_url }}</a></td>
+                                <td>{{ case.updated_at|date:"M d, Y" }}</td>
+                                <td>
+                                    <a href="{% url 'cases:case_detail' case.pk %}" class="btn btn-sm btn-success">Submit Report</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-4">No cases approved for submission.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Recent Receipts -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h5 class="fw-bold mb-0"><i class="bi bi-receipt me-2"></i>My Recent Receipts</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for sub in recent_submissions %}
+                    <li class="list-group-item px-0">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cases:case_detail' sub.case.pk %}" class="fw-bold text-decoration-none">{{ sub.case.business_label|default:"Review"|truncatechars:15 }}</a>
+                            <span class="badge bg-success">Recorded</span>
+                        </div>
+                        <small class="text-muted">Ref: {{ sub.receipt_reference|truncatechars:15 }}</small><br>
+                        <small class="text-muted">{{ sub.submitted_at|timesince }} ago</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted px-0">No recent submissions.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

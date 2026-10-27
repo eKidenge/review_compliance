@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Reviewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-clipboard-check me-2"></i>Reviewer Workspace</h2>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        {% include 'dashboard/partials/stat_card.html' with title="Awaiting Triage" value=needs_triage_count icon="exclamation-circle" color="warning" subtitle="Cases requiring your assessment" %}
+    </div>
+    <div class="col-md-6">
+        {% include 'dashboard/partials/stat_card.html' with title="My Assessments" value=my_assessments_count icon="check2-circle" color="success" subtitle="Total cases you have reviewed" %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Triage Queue -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-inbox me-2"></i>Triage Queue (Oldest First)</h5>
+                <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-sm btn-outline-warning">View Full Queue</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Business</th>
+                                <th>URL</th>
+                                <th>Imported</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for case in assigned_queue %}
+                            <tr>
+                                <td>{{ case.business_label|default:"Unknown" }}</td>
+                                <td><a href="{{ case.canonical_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">{{ case.canonical_url }}</a></td>
+                                <td>{{ case.created_at|timesince }} ago</td>
+                                <td>
+                                    <a href="{% url 'cases:case_detail' case.pk %}" class="btn btn-sm btn-primary">Assess</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-4">Triage queue is empty!</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Recently Assessed -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h5 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Recently Assessed</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for case in recently_assessed %}
+                    <li class="list-group-item px-0">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'cases:case_detail' case.pk %}" class="fw-bold text-decoration-none">{{ case.business_label|default:"Review"|truncatechars:15 }}</a>
+                            <span class="badge {% if case.status == 'ELIGIBLE' %}bg-success{% else %}bg-danger{% endif %}">{{ case.get_status_display }}</span>
+                        </div>
+                        <small class="text-muted">Assessed {{ case.assessment.assessed_at|timesince }} ago</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted px-0">No recent assessments.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

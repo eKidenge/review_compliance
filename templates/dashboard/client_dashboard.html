@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Client Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-bar-chart-line me-2"></i>Performance Overview</h2>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        {% include 'dashboard/partials/stat_card.html' with title="Reports Submitted" value=total_submitted icon="send" color="primary" %}
+    </div>
+    <div class="col-md-3">
+        {% include 'dashboard/partials/stat_card.html' with title="Reviews Removed" value=total_removed icon="trash" color="success" %}
+    </div>
+    <div class="col-md-3">
+        {% include 'dashboard/partials/stat_card.html' with title="Reviews Retained" value=total_retained icon="shield-check" color="danger" %}
+    </div>
+    <div class="col-md-3">
+        {% include 'dashboard/partials/stat_card.html' with title="Success Rate" value=success_rate|stringformat:"s"|add:"%" icon="graph-up-arrow" color="info" %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h5 class="fw-bold mb-0"><i class="bi bi-list-check me-2"></i>Case Status Breakdown</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mt-3">
+                    {% for status in status_counts %}
+                    <div class="col-md-3 mb-4">
+                        <div class="p-3 border rounded bg-light">
+                            <h3 class="fw-bold mb-1">{{ status.count }}</h3>
+                            <span class="text-muted text-uppercase small">{{ status.status|title }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="alert alert-info mt-3 mb-0" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Note:</strong> Review removals are ultimately decided by Google's moderation policies. This dashboard tracks the outcomes of the reports submitted on your behalf.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

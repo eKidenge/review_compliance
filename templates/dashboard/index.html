@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Dashboard Overview</h2>
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Cases</h5>
+                <p class="card-text fs-2">{{ total_cases }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Needs Triage</h5>
+                <p class="card-text fs-2">{{ stats.NEEDS_TRIAGE|default:0 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Reported</h5>
+                <p class="card-text fs-2">{{ stats.REPORT_RECEIVED|default:0 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Approval Rate</h5>
+                <p class="card-text fs-2">{{ approval_rate }}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
