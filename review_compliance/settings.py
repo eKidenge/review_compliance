@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
 
-    # Local Apps (Removed 'apps.' prefix to match your root folder structure)
+    # Local Apps (MUST use 'apps.' prefix since they are inside the apps/ folder)
     'apps.accounts',
     'apps.imports',
     'apps.cases',
@@ -47,15 +47,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # Added for production static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Custom Audit Middleware (Must be after AuthenticationMiddleware)
-    'audit.middleware.AuditMiddleware',
+    # Custom Audit Middleware (MUST use 'apps.' prefix)
+    'apps.audit.middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'review_compliance.urls'
@@ -82,8 +82,6 @@ WSGI_APPLICATION = 'review_compliance.wsgi.application'
 # ==========================================
 # DATABASE (SQLITE FOR LOCAL / RENDER DATABASE_URL FOR PROD)
 # ==========================================
-# This automatically uses SQLite locally, but switches to PostgreSQL on Render 
-# if you provide the DATABASE_URL environment variable.
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
@@ -112,10 +110,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Custom User Model (CRITICAL)
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# Custom Authentication Backend (For IP tracking & Lockout)
+# Custom Authentication Backend (MUST use 'apps.' prefix)
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.CustomAuthBackend',
-    'django.contrib.auth.backends.ModelBackend', # Fallback
+    'apps.accounts.backends.CustomAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 
