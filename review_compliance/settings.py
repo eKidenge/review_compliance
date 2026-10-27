@@ -38,11 +38,11 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
 
     # Local Apps (Removed 'apps.' prefix to match your root folder structure)
-    'accounts',
-    'imports',
-    'cases',
-    'audit',
-    'dashboard',
+    'apps.accounts',
+    'apps.imports',
+    'apps.cases',
+    'apps.audit',
+    'apps.dashboard',
 ]
 
 MIDDLEWARE = [
