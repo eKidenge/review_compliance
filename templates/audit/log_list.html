@@ -20,7 +20,7 @@
 <div class="gov-card mb-4">
     <div class="card-body p-3">
         <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-5">
                 <label class="form-label text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Search Ledger</label>
                 <input type="text" name="q" class="form-control rounded-0 border-secondary" placeholder="Search by actor, object type, or ID..." value="{{ search_query }}">
             </div>
@@ -33,10 +33,20 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <button type="submit" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase" style="letter-spacing: 0.5px;">
-                    <i class="bi bi-search me-1"></i>Search
+                    <i class="bi bi-search me-1"></i>Apply Filter
                 </button>
+            </div>
+            
+            <!-- Technical View Toggle -->
+            <div class="col-md-12 mt-3 pt-3 border-top">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="technical" value="true" id="technicalToggle" {% if show_technical %}checked{% endif %} onchange="this.form.submit()">
+                    <label class="form-check-label text-muted small text-uppercase fw-bold" for="technicalToggle" style="letter-spacing: 0.5px;">
+                        <i class="bi bi-terminal me-1"></i>Include Raw HTTP System Logs (Forensic Technical View)
+                    </label>
+                </div>
             </div>
         </form>
     </div>
@@ -80,7 +90,11 @@
                     </td>
                     
                     <!-- Action -->
-                    <td><span class="text-dark fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ event.action }}</span></td>
+                    <td>
+                        <span class="text-dark fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                            {{ event.action }}
+                        </span>
+                    </td>
                     
                     <!-- Target Object -->
                     <td>
