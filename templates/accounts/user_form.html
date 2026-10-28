@@ -1,18 +1,67 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
+{% block title %}{% if object %}Edit Personnel Record{% else %}Register New Personnel{% endif %}{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-dark text-white">
-                <h4 class="mb-0">{% if object %}Edit User: {{ object.username }}{% else %}Create New User{% endif %}</h4>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">
+            {% if object %}Amend Personnel Record{% else %}Personnel Registration{% endif %}
+        </h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">
+            {% if object %}Update Authorization & Access Details{% else %}Official Authorization & Access Form{% endif %}
+        </small>
+    </div>
+    <div class="text-end">
+        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-dark rounded-0 fw-bold">
+            <i class="bi bi-arrow-left me-1"></i>Return to Registry
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="gov-card">
+            <!-- Card Header -->
+            <div class="gov-card-header p-3 d-flex align-items-center">
+                <i class="bi bi-person-badge-fill fs-4 me-3"></i>
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                    {% if object %}Personnel File: {{ object.username }}{% else %}New Personnel File{% endif %}
+                </h6>
             </div>
-            <div class="card-body">
+            
+            <!-- Card Body -->
+            <div class="card-body p-4">
+                
+                <!-- Instructional Alert -->
+                <div class="p-3 mb-4 border-start border-4 border-info bg-light" style="border-radius: 4px;">
+                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                        <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
+                        <strong>Notice:</strong> 
+                        {% if object %}
+                            Modifying a personnel record will be logged in the System Audit Trail. Only authorized Administrators may perform this action.
+                        {% else %}
+                            You are about to create a new authorized account. Assign the appropriate role carefully, as this determines the user's access privileges across the system.
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <!-- The Form -->
                 <form method="post">
                     {% csrf_token %}
                     {% crispy form %}
                 </form>
+                
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="card-footer bg-light border-top text-muted small p-3">
+                <div class="d-flex justify-content-between">
+                    <span><i class="bi bi-shield-lock me-1"></i> All actions are logged and auditable</span>
+                    <span>Form ID: PR-{{ object.id|default:"NEW" }}</span>
+                </div>
             </div>
         </div>
     </div>

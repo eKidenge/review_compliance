@@ -1,20 +1,33 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
+{% block title %}Personnel Registry{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>User Management</h2>
-    <a href="{% url 'accounts:user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Create New User</a>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">Personnel Registry</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">User Authorization & Access Control • Official Use Only</small>
+    </div>
+    <div class="text-end">
+        <a href="{% url 'accounts:user_create' %}" class="btn btn-dark rounded-0 fw-bold px-4">
+            <i class="bi bi-person-plus-fill me-2"></i>Register New Personnel
+        </a>
+    </div>
 </div>
 
-<div class="card mb-4 shadow-sm">
-    <div class="card-body">
-        <form method="get" class="row g-3">
+<!-- Filter Panel -->
+<div class="gov-card mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-3 align-items-end">
             <div class="col-md-5">
-                <input type="text" name="q" class="form-control" placeholder="Search username, email, name..." value="{{ request.GET.q }}">
+                <label class="form-label text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Search Registry</label>
+                <input type="text" name="q" class="form-control rounded-0 border-secondary" placeholder="Search username, email, or full name..." value="{{ request.GET.q }}">
             </div>
             <div class="col-md-4">
-                <select name="role" class="form-select">
+                <label class="form-label text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Authorization Role</label>
+                <select name="role" class="form-select rounded-0 border-secondary">
                     <option value="">All Roles</option>
                     <option value="ADMIN" {% if request.GET.role == 'ADMIN' %}selected{% endif %}>Administrator</option>
                     <option value="REVIEWER" {% if request.GET.role == 'REVIEWER' %}selected{% endif %}>Case Reviewer</option>
@@ -23,52 +36,79 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                <button type="submit" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase" style="letter-spacing: 0.5px;">
+                    <i class="bi bi-funnel me-1"></i>Apply Filter
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="card shadow-sm">
+<!-- Personnel Data Table -->
+<div class="gov-card">
+    <div class="gov-card-header p-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-people-fill me-2"></i>Active Personnel Roster</h6>
+        <span class="badge bg-light text-dark rounded-0">{{ users|length }} Personnel</span>
+    </div>
+    
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="table-dark">
+        <table class="table table-gov table-hover align-middle mb-0">
+            <thead>
                 <tr>
-                    <th>Username</th>
+                    <th class="ps-4">System Username</th>
                     <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Email Address</th>
+                    <th>Authorized Role</th>
+                    <th>Account Status</th>
+                    <th class="text-end pe-4">Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for u in users %}
                 <tr>
-                    <td>{{ u.username }}</td>
-                    <td>{{ u.first_name }} {{ u.last_name }}</td>
-                    <td>{{ u.email }}</td>
-                    <td><span class="badge bg-info text-dark">{{ u.get_role_display }}</span></td>
+                    <td class="ps-4 fw-bold text-dark font-monospace">{{ u.username }}</td>
+                    <td>{{ u.get_full_name|default:"Not Provided" }}</td>
+                    <td class="text-muted">{{ u.email }}</td>
                     <td>
-                        {% if u.is_active %}
-                            <span class="badge bg-success">Active</span>
+                        {% if u.role == 'ADMIN' %}
+                            <span class="badge badge-gov bg-dark border border-dark">ADMINISTRATOR</span>
+                        {% elif u.role == 'REVIEWER' %}
+                            <span class="badge badge-gov bg-warning text-dark border border-warning">REVIEWER</span>
+                        {% elif u.role == 'SUBMITTER' %}
+                            <span class="badge badge-gov bg-success border border-success">SUBMITTER</span>
+                        {% elif u.role == 'CLIENT' %}
+                            <span class="badge badge-gov bg-info text-dark border border-info">CLIENT</span>
                         {% else %}
-                            <span class="badge bg-danger">Inactive</span>
+                            <span class="badge badge-gov bg-secondary border border-secondary">{{ u.get_role_display|upper }}</span>
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        {% if u.is_active %}
+                            <span class="badge badge-gov bg-success border border-success">ACTIVE</span>
+                        {% else %}
+                            <span class="badge badge-gov bg-danger border border-danger">INACTIVE</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-dark rounded-0 fw-bold">
+                            <i class="bi bi-pencil-square me-1"></i>Edit Record
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4">No users found.</td>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-person-x fs-1 d-block mb-2 opacity-50"></i>
+                        <span class="text-uppercase fw-bold" style="letter-spacing: 1px;">No personnel records found matching your criteria.</span>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <div class="card-footer">
+    
+    <!-- Pagination -->
+    <div class="card-footer bg-light border-top pt-3">
         {% include 'partials/pagination.html' %}
     </div>
 </div>

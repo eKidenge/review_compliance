@@ -1,66 +1,153 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}Case #{{ case.id }}{% endblock %}
+{% block title %}Case File #{{ case.id }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0">Case #{{ case.id }}</h2>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
     <div>
-        <span class="badge fs-6 
-            {% if case.status == 'NEEDS_TRIAGE' %}bg-warning text-dark
-            {% elif case.status == 'ELIGIBLE' %}bg-info text-dark
-            {% elif case.status == 'APPROVED' %}bg-primary
-            {% elif case.status == 'REPORT_RECEIVED' %}bg-success
-            {% elif case.status == 'REMOVED' %}bg-dark
-            {% else %}bg-secondary{% endif %}">
-            {{ case.get_status_display }}
+        <h2 class="mb-0 text-dark fw-bold">Case File: #{{ case.id }}</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Official Dossier • Subject to Audit</small>
+    </div>
+    <div class="text-end">
+        <!-- Dynamic Status Stamp -->
+        <span class="badge rounded-0 fs-6 py-2 px-3 border 
+            {% if case.status == 'NEEDS_TRIAGE' %}bg-warning text-dark border-warning
+            {% elif case.status == 'ELIGIBLE' %}bg-info text-dark border-info
+            {% elif case.status == 'NOT_ELIGIBLE' %}bg-secondary border-secondary
+            {% elif case.status == 'APPROVED' %}bg-primary border-primary
+            {% elif case.status == 'REPORT_RECEIVED' %}bg-success border-success
+            {% elif case.status == 'REMOVED' %}bg-dark border-dark
+            {% else %}bg-light text-dark border-secondary{% endif %}" 
+            style="letter-spacing: 1px;">
+            {{ case.get_status_display|upper }}
         </span>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Left Column: Case Info -->
+    <!-- Left Column: Static Case Information -->
     <div class="col-md-6">
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Target Information</h5>
+        
+        <!-- Target Information Card -->
+        <div class="gov-card mb-4">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-info-circle me-2"></i>Subject Target Information</h6>
             </div>
-            <div class="card-body">
-                <p class="mb-2"><strong>Business:</strong> {{ case.business_label|default:"N/A" }}</p>
-                <p class="mb-2"><strong>URL:</strong> <br>
-                    <a href="{{ case.canonical_url }}" target="_blank" class="text-break">{{ case.canonical_url }}</a>
-                </p>
-                <p class="mb-0"><strong>Imported:</strong> {{ case.created_at|date:"F j, Y, P" }}</p>
+            <div class="card-body p-3">
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted text-uppercase small fw-bold" style="width: 35%;">Business Entity:</td>
+                            <td class="fw-bold text-dark">{{ case.business_label|default:"Unidentified Entity" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted text-uppercase small fw-bold">Target URL:</td>
+                            <td>
+                                <a href="{{ case.canonical_url }}" target="_blank" class="text-break text-decoration-none">
+                                    <i class="bi bi-link-45deg"></i> {{ case.canonical_url }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted text-uppercase small fw-bold">Date Imported:</td>
+                            <td>{{ case.created_at|date:"F j, Y, P" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted text-uppercase small fw-bold">Source Batch:</td>
+                            <td>
+                                {% if case.source_batch %}
+                                    <a href="{% url 'imports:import_summary' case.source_batch.pk %}" class="text-decoration-none">Batch #{{ case.source_batch.id|stringformat:"s"|slice:":8" }}</a>
+                                {% else %}
+                                    <span class="text-muted">Manual Entry</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
+        <!-- Policy Assessment Dossier -->
         {% if case.assessment %}
-        <div class="card shadow-sm border-0 border-start border-4 border-info mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-clipboard-check me-2"></i>Policy Assessment</h5>
+        <div class="gov-card border-start border-4 border-info mb-4">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-clipboard-check me-2"></i>Policy Assessment Record</h6>
             </div>
-            <div class="card-body">
-                <p><strong>Category:</strong> {{ case.assessment.category }}</p>
-                <p><strong>Rationale:</strong> {{ case.assessment.rationale }}</p>
-                <p class="mb-0"><strong>Decision:</strong> {{ case.assessment.decision }}</p>
-                <hr>
-                <small class="text-muted">Assessed by {{ case.assessment.assessed_by.username }} on {{ case.assessment.assessed_at|date:"M d, Y" }}</small>
+            <div class="card-body p-3">
+                <p class="mb-2"><strong class="text-uppercase small text-muted">Category:</strong> <br>{{ case.assessment.category }}</p>
+                <p class="mb-2"><strong class="text-uppercase small text-muted">Decision:</strong> <br>
+                    <span class="badge badge-gov {% if case.assessment.decision == 'ELIGIBLE' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ case.assessment.decision|upper }}
+                    </span>
+                </p>
+                <p class="mb-3"><strong class="text-uppercase small text-muted">Rationale:</strong> <br>
+                    <span class="text-dark">{{ case.assessment.rationale }}</span>
+                </p>
+                <hr class="my-2">
+                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                    <i class="bi bi-person-badge me-1"></i> Assessed by {{ case.assessment.assessed_by.username }} on {{ case.assessment.assessed_at|date:"M d, Y" }}
+                </small>
             </div>
         </div>
         {% endif %}
+
+        <!-- Approval Record -->
+        {% if case.approval %}
+        <div class="gov-card border-start border-4 border-primary mb-4">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-check2-square me-2"></i>Administrative Approval</h6>
+            </div>
+            <div class="card-body p-3">
+                <p class="mb-2"><strong class="text-uppercase small text-muted">Rationale:</strong> <br>
+                    <span class="text-dark">{{ case.approval.rationale }}</span>
+                </p>
+                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                    <i class="bi bi-shield-check me-1"></i> Approved by {{ case.approval.approved_by.username }} on {{ case.approval.created_at|date:"M d, Y" }}
+                </small>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Submission Receipts Ledger -->
+        {% if case.submissions.all %}
+        <div class="gov-card border-start border-4 border-success mb-4">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-receipt me-2"></i>Filing Receipt Ledger</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for sub in case.submissions.all %}
+                    <li class="list-group-item p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark">{{ sub.method }}</span>
+                            <span class="badge badge-gov {% if sub.result == 'SUCCESS' %}bg-success{% else %}bg-danger{% endif %}">{{ sub.result|upper }}</span>
+                        </div>
+                        <div class="text-muted small font-monospace mb-1">REF: {{ sub.receipt_reference }}</div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                            <i class="bi bi-clock me-1"></i> Filed by {{ sub.submitted_by.username }} on {{ sub.submitted_at|date:"M d, Y P" }}
+                        </small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 
-    <!-- Right Column: Workflow Actions -->
+    <!-- Right Column: Workflow Action Panels -->
     <div class="col-md-6">
         
-        <!-- Triage Form -->
+        <!-- Triage Assessment Form -->
         {% if case.status == 'NEEDS_TRIAGE' and user.is_reviewer %}
-        <div class="card shadow-sm border-0 border-start border-4 border-warning mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Triage Assessment</h5>
+        <div class="gov-card border-start border-4 border-warning mb-4 shadow-sm">
+            <div class="gov-card-header p-3" style="background-color: #b45309;">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-pencil-square me-2"></i>Required Action: Triage Assessment</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">Evaluate the review against the official platform policies. Provide detailed evidence for your decision.</p>
                 <form method="post" action="{% url 'cases:submit_assessment' case.pk %}">
                     {% csrf_token %}
                     {% crispy assessment_form %}
@@ -69,13 +156,14 @@
         </div>
         {% endif %}
 
-        <!-- Approval Form -->
+        <!-- Admin Approval Form -->
         {% if case.status == 'ELIGIBLE' and user.is_admin %}
-        <div class="card shadow-sm border-0 border-start border-4 border-primary mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-check2-square me-2"></i>Admin Approval</h5>
+        <div class="gov-card border-start border-4 border-primary mb-4 shadow-sm">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-shield-lock me-2"></i>Required Action: Administrative Approval</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
+                <p class="text-muted small mb-3">This case has been marked ELIGIBLE. Review the evidence and approve to authorize submission.</p>
                 <form method="post" action="{% url 'cases:approve_case' case.pk %}">
                     {% csrf_token %}
                     {% crispy approval_form %}
@@ -86,18 +174,35 @@
 
         <!-- Submission Form -->
         {% if case.status == 'APPROVED' and user.is_submitter %}
-        <div class="card shadow-sm border-0 border-start border-4 border-success mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-send-check me-2"></i>Record Submission Receipt</h5>
+        <div class="gov-card border-start border-4 border-success mb-4 shadow-sm">
+            <div class="gov-card-header p-3" style="background-color: #15803d;">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-send-check me-2"></i>Required Action: File Official Report</h6>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info small mb-3">
-                    Submit the report manually on Google, then record the receipt reference here.
+            <div class="card-body p-4">
+                <div class="p-3 mb-4 border-start border-4 border-success bg-light" style="border-radius: 4px;">
+                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                        <i class="bi bi-info-circle-fill text-success me-2 fs-6"></i>
+                        Submit the report manually on the Google platform. Once confirmed, record the official receipt ID below to update the case status.
+                    </p>
                 </div>
                 <form method="post" action="{% url 'cases:record_submission' case.pk %}">
                     {% csrf_token %}
                     {% crispy submission_form %}
                 </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Terminal State (If no action is available) -->
+        {% if case.status == 'REPORT_RECEIVED' or case.status == 'REMOVED' or case.status == 'NOT_ELIGIBLE' %}
+        <div class="gov-card border-start border-4 border-secondary mb-4">
+            <div class="gov-card-header p-3" style="background-color: #4b5563;">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-lock-fill me-2"></i>Case Finalized</h6>
+            </div>
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-check-circle fs-1 text-success mb-3"></i>
+                <h5 class="text-uppercase fw-bold">No Further Action Required</h5>
+                <p class="text-muted small mb-0">This case file has reached its final disposition. All actions are logged and subject to audit.</p>
             </div>
         </div>
         {% endif %}

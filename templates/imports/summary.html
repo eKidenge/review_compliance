@@ -1,54 +1,100 @@
 {% extends 'base.html' %}
 
-{% block title %}Import Summary{% endblock %}
+{% block title %}Ingestion Report{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="bi bi-file-earmark-check me-2"></i>Import Batch Summary</h4>
-                <span class="badge bg-light text-dark">{{ batch.status }}</span>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">Data Ingestion Report</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Bulk Processing Summary • Official Record</small>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-dark rounded-0 py-2 px-3"><i class="bi bi-clock-history me-2"></i>Processed: {% now "M d, Y" %}</span>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="gov-card">
+            <!-- Card Header -->
+            <div class="gov-card-header p-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                    <i class="bi bi-file-earmark-check me-2"></i>Batch Ingestion Details
+                </h6>
+                <span class="badge badge-gov {% if batch.status == 'COMPLETED' %}bg-success{% elif batch.status == 'FAILED' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                    {{ batch.status|upper }}
+                </span>
             </div>
+            
+            <!-- Card Body -->
             <div class="card-body p-4">
-                <h5 class="mb-4 text-truncate">File: <strong>{{ batch.filename }}</strong></h5>
                 
-                <div class="row text-center mb-4">
-                    <div class="col-4 border-end">
-                        <h3 class="fw-bold text-primary">{{ batch.row_count }}</h3>
-                        <small class="text-muted text-uppercase">Total Rows</small>
+                <!-- File Identification -->
+                <div class="mb-4 pb-3 border-bottom">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Source File Identifier</h6>
+                    <h5 class="text-dark font-monospace mb-0"><i class="bi bi-file-earmark-excel text-success me-2"></i>{{ batch.filename }}</h5>
+                </div>
+                
+                <!-- Metrics Grid -->
+                <h6 class="text-muted text-uppercase small fw-bold mb-3" style="letter-spacing: 0.5px;">Processing Metrics</h6>
+                <div class="row g-3 text-center mb-4">
+                    
+                    <div class="col-md-4">
+                        <div class="p-3 border bg-light h-100" style="border-radius: 4px;">
+                            <h2 class="fw-bold text-dark mb-1">{{ batch.row_count }}</h2>
+                            <span class="text-muted text-uppercase small fw-bold">Total Rows</span>
+                        </div>
                     </div>
-                    <div class="col-4 border-end">
-                        <h3 class="fw-bold text-success">{{ batch.valid_count }}</h3>
-                        <small class="text-muted text-uppercase">Valid & Queued</small>
+                    
+                    <div class="col-md-4">
+                        <div class="p-3 border bg-light h-100 border-start border-4 border-success" style="border-radius: 4px;">
+                            <h2 class="fw-bold text-success mb-1">{{ batch.valid_count }}</h2>
+                            <span class="text-muted text-uppercase small fw-bold">Valid & Queued</span>
+                        </div>
                     </div>
-                    <div class="col-4">
-                        <h3 class="fw-bold text-warning">{{ batch.duplicate_count }}</h3>
-                        <small class="text-muted text-uppercase">Duplicates</small>
+                    
+                    <div class="col-md-4">
+                        <div class="p-3 border bg-light h-100 border-start border-4 border-warning" style="border-radius: 4px;">
+                            <h2 class="fw-bold text-warning mb-1">{{ batch.duplicate_count }}</h2>
+                            <span class="text-muted text-uppercase small fw-bold">Duplicates Skipped</span>
+                        </div>
                     </div>
+                    
                 </div>
 
+                <!-- Error Alerts -->
                 {% if batch.invalid_count > 0 %}
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>{{ batch.invalid_count }} invalid URLs</strong> were skipped because they did not match the Google Maps format.
+                <div class="p-3 mb-3 border-start border-4 border-danger bg-light" style="border-radius: 4px;">
+                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                        <i class="bi bi-exclamation-triangle-fill text-danger me-2 fs-6"></i>
+                        <strong>Validation Notice:</strong> {{ batch.invalid_count }} URL(s) were rejected because they did not match the required Google Maps format.
+                    </p>
                 </div>
                 {% endif %}
 
                 {% if batch.error_log %}
-                <div class="alert alert-warning">
-                    <strong>Processing Error:</strong> {{ batch.error_log }}
+                <div class="p-3 mb-3 border-start border-4 border-warning bg-light" style="border-radius: 4px;">
+                    <p class="mb-0 text-dark small font-monospace" style="line-height: 1.6;">
+                        <i class="bi bi-bug-fill text-warning me-2 fs-6"></i>
+                        <strong>System Error Log:</strong> <br> {{ batch.error_log }}
+                    </p>
                 </div>
                 {% endif %}
 
-                <div class="d-flex gap-2 mt-4">
-                    <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-primary">
-                        <i class="bi bi-list-task me-1"></i>Go to Triage Queue
-                    </a>
-                    <a href="{% url 'imports:upload_csv' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-upload me-1"></i>Upload Another File
-                    </a>
+                <!-- Next Steps -->
+                <div class="mt-4 pt-3 border-top">
+                    <h6 class="text-muted text-uppercase small fw-bold mb-3" style="letter-spacing: 0.5px;">Authorized Actions</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-dark rounded-0 fw-bold px-4">
+                            <i class="bi bi-list-task me-1"></i>Proceed to Triage Queue
+                        </a>
+                        <a href="{% url 'imports:upload_csv' %}" class="btn btn-outline-secondary rounded-0 fw-bold px-4">
+                            <i class="bi bi-upload me-1"></i>Ingest Another File
+                        </a>
+                    </div>
                 </div>
+                
             </div>
         </div>
     </div>

@@ -1,39 +1,122 @@
 {% extends 'base.html' %}
 
+{% block title %}Personnel File{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">My Profile</h4>
-                <a href="{% url 'accounts:profile_update' %}" class="btn btn-light btn-sm">Edit Profile</a>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">Personnel File</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Official Account Record • Confidential</small>
+    </div>
+    <div class="text-end">
+        <a href="{% url 'accounts:profile_update' %}" class="btn btn-dark rounded-0 fw-bold px-4">
+            <i class="bi bi-pencil-square me-2"></i>Request Amendment
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="gov-card">
+            
+            <!-- Card Header -->
+            <div class="gov-card-header p-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                    <i class="bi bi-person-vcard me-2"></i>Authorized Personnel Record
+                </h6>
+                <span class="badge badge-gov bg-light text-dark border border-secondary">
+                    REF: {{ user_obj.id|stringformat:"04d" }}
+                </span>
             </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Username:</strong></div>
-                    <div class="col-sm-9">{{ user_obj.username }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Full Name:</strong></div>
-                    <div class="col-sm-9">{{ user_obj.first_name }} {{ user_obj.last_name }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Email:</strong></div>
-                    <div class="col-sm-9">{{ user_obj.email }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Role:</strong></div>
-                    <div class="col-sm-9"><span class="badge bg-info text-dark">{{ user_obj.get_role_display }}</span></div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Phone:</strong></div>
-                    <div class="col-sm-9">{{ user_obj.phone_number|default:"Not provided" }}</div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-sm-3"><strong>Member Since:</strong></div>
-                    <div class="col-sm-9">{{ user_obj.created_at|date:"F j, Y" }}</div>
+            
+            <!-- Card Body: Data Table -->
+            <div class="card-body p-0">
+                <table class="table table-gov table-borderless align-middle mb-0">
+                    <tbody>
+                        <!-- Username -->
+                        <tr class="border-bottom">
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="width: 35%; padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                System Username
+                            </td>
+                            <td class="font-monospace fw-bold text-dark" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                {{ user_obj.username }}
+                            </td>
+                        </tr>
+                        
+                        <!-- Full Name -->
+                        <tr class="border-bottom">
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                Full Legal Name
+                            </td>
+                            <td class="text-dark" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                {{ user_obj.get_full_name|default:"Not Provided" }}
+                            </td>
+                        </tr>
+                        
+                        <!-- Email -->
+                        <tr class="border-bottom">
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                Official Email Address
+                            </td>
+                            <td class="text-dark" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                <a href="mailto:{{ user_obj.email }}" class="text-decoration-none text-dark">
+                                    {{ user_obj.email|default:"Not Provided" }}
+                                </a>
+                            </td>
+                        </tr>
+                        
+                        <!-- Role -->
+                        <tr class="border-bottom">
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                Authorization Level
+                            </td>
+                            <td style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                {% if user_obj.role == 'ADMIN' %}
+                                    <span class="badge badge-gov bg-dark border border-dark">ADMINISTRATOR</span>
+                                {% elif user_obj.role == 'REVIEWER' %}
+                                    <span class="badge badge-gov bg-warning text-dark border border-warning">CASE REVIEWER</span>
+                                {% elif user_obj.role == 'SUBMITTER' %}
+                                    <span class="badge badge-gov bg-success border border-success">SUBMITTER</span>
+                                {% elif user_obj.role == 'CLIENT' %}
+                                    <span class="badge badge-gov bg-info text-dark border border-info">CLIENT</span>
+                                {% else %}
+                                    <span class="badge badge-gov bg-secondary border border-secondary">{{ user_obj.get_role_display|upper }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        
+                        <!-- Phone -->
+                        <tr class="border-bottom">
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                Contact Telephone
+                            </td>
+                            <td class="text-dark font-monospace" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                {{ user_obj.phone_number|default:"Not Provided" }}
+                            </td>
+                        </tr>
+                        
+                        <!-- Member Since -->
+                        <tr>
+                            <td class="ps-4 text-muted text-uppercase small fw-bold" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                Record Established
+                            </td>
+                            <td class="text-dark" style="padding-top: 1.25rem; padding-bottom: 1.25rem;">
+                                {{ user_obj.created_at|date:"F j, Y" }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="card-footer bg-light border-top text-muted small p-3">
+                <div class="d-flex justify-content-between">
+                    <span><i class="bi bi-shield-lock me-1"></i> This record is subject to system audit</span>
+                    <span>Last Login IP: {{ user_obj.last_login_ip|default:"Unrecorded" }}</span>
                 </div>
             </div>
+            
         </div>
     </div>
 </div>
