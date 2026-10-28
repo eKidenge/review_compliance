@@ -68,10 +68,29 @@ class ReviewCase(models.Model):
 
 
 class PolicyAssessment(models.Model):
+    # --- CHOICES DEFINITIONS ---
+    CATEGORY_CHOICES = [
+        ('SPAM', 'Spam or Misleading Content'),
+        ('FAKE_ENGAGEMENT', 'Fake Engagement or Bot Activity'),
+        ('CONFLICT_OF_INTEREST', 'Conflict of Interest'),
+        ('OFF_TOPIC', 'Off-Topic or Irrelevant Content'),
+        ('PROFANITY', 'Profanity or Hate Speech'),
+        ('PERSONAL_INFO', 'Contains Personal Information'),
+        ('ILLEGAL_CONTENT', 'Illegal or Restricted Content'),
+        ('OTHER', 'Other Policy Violation'),
+    ]
+    
+    DECISION_CHOICES = [
+        ('ELIGIBLE', 'Eligible - Violation Confirmed'),
+        ('NOT_ELIGIBLE', 'Not Eligible - No Violation Found'),
+        ('INSUFFICIENT_EVIDENCE', 'Insufficient Evidence - Needs More Proof'),
+    ]
+
+    # --- FIELDS ---
     case = models.OneToOneField(ReviewCase, on_delete=models.CASCADE, related_name='assessment')
-    category = models.CharField(max_length=100)
+    category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
     rationale = models.TextField()
-    decision = models.CharField(max_length=50) 
+    decision = models.CharField(max_length=50, choices=DECISION_CHOICES)
     assessed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='assessments')
     assessed_at = models.DateTimeField(auto_now=True)
 
@@ -80,7 +99,7 @@ class PolicyAssessment(models.Model):
         verbose_name_plural = "Policy Assessments"
 
     def __str__(self):
-        return f"Assessment for Case #{self.case.id} - {self.decision}"
+        return f"Assessment for Case #{self.case.id} - {self.get_decision_display()}"
 
 
 class Approval(models.Model):
@@ -119,7 +138,7 @@ class SubmissionAttempt(models.Model):
         verbose_name_plural = "Submission Attempts"
 
     def __str__(self):
-        return f"Submission for Case #{self.case.id} - {self.result}"
+        return f"Submission for Case #{self.case.id} - {self.get_result_display()}"
 
 
 class Outcome(models.Model):
@@ -131,7 +150,7 @@ class Outcome(models.Model):
     
     case = models.ForeignKey(ReviewCase, on_delete=models.CASCADE, related_name='outcomes')
     outcome_type = models.CharField(max_length=50, choices=OUTCOME_CHOICES)
-    source = models.CharField(max_length=100) # e.g., "Manual verification on Google Maps"
+    source = models.CharField(max_length=100)
     observed_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
 
