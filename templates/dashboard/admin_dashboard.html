@@ -155,7 +155,7 @@
             <div class="card-body p-3">
                 {% for status in status_counts %}
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="text-uppercase small fw-bold text-muted">{{ status.status|title }}</span>
+                    <span class="text-uppercase small fw-bold text-muted">{{ status.status|title|cut:"_" }}</span>
                     <div class="d-flex align-items-center" style="width: 60%;">
                         <div class="progress w-100 me-2" style="height: 8px; border-radius: 0;">
                             <!-- Dynamic progress bar based on total cases -->
