@@ -10,7 +10,9 @@
         <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Bulk Processing Summary • Official Record</small>
     </div>
     <div class="text-end">
-        <span class="badge bg-dark rounded-0 py-2 px-3"><i class="bi bi-clock-history me-2"></i>Processed: {% now "M d, Y" %}</span>
+        <span class="badge bg-dark rounded-0 py-2 px-3">
+            <i class="bi bi-clock-history me-2"></i>Processed: {% now "M d, Y" %}
+        </span>
     </div>
 </div>
 
@@ -33,13 +35,19 @@
                 <!-- File Identification -->
                 <div class="mb-4 pb-3 border-bottom">
                     <h6 class="text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Source File Identifier</h6>
-                    <h5 class="text-dark font-monospace mb-0"><i class="bi bi-file-earmark-excel text-success me-2"></i>{{ batch.filename }}</h5>
+                    <h5 class="text-dark font-monospace mb-0">
+                        <i class="bi bi-file-earmark-excel text-success me-2"></i>{{ batch.filename }}
+                    </h5>
+                    <small class="text-muted">
+                        Uploaded by <strong>{{ batch.uploaded_by.username }}</strong> on {{ batch.imported_at|date:"F j, Y, P" }}
+                    </small>
                 </div>
                 
                 <!-- Metrics Grid -->
                 <h6 class="text-muted text-uppercase small fw-bold mb-3" style="letter-spacing: 0.5px;">Processing Metrics</h6>
                 <div class="row g-3 text-center mb-4">
                     
+                    <!-- Total Rows -->
                     <div class="col-md-4">
                         <div class="p-3 border bg-light h-100" style="border-radius: 4px;">
                             <h2 class="fw-bold text-dark mb-1">{{ batch.row_count }}</h2>
@@ -47,6 +55,7 @@
                         </div>
                     </div>
                     
+                    <!-- Valid & Queued -->
                     <div class="col-md-4">
                         <div class="p-3 border bg-light h-100 border-start border-4 border-success" style="border-radius: 4px;">
                             <h2 class="fw-bold text-success mb-1">{{ batch.valid_count }}</h2>
@@ -54,6 +63,7 @@
                         </div>
                     </div>
                     
+                    <!-- Duplicates -->
                     <div class="col-md-4">
                         <div class="p-3 border bg-light h-100 border-start border-4 border-warning" style="border-radius: 4px;">
                             <h2 class="fw-bold text-warning mb-1">{{ batch.duplicate_count }}</h2>
@@ -63,16 +73,19 @@
                     
                 </div>
 
-                <!-- Error Alerts -->
+                <!-- Invalid URLs Notice (Transparency Block) -->
                 {% if batch.invalid_count > 0 %}
                 <div class="p-3 mb-3 border-start border-4 border-danger bg-light" style="border-radius: 4px;">
-                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                    <p class="mb-2 text-dark small fw-bold" style="line-height: 1.6;">
                         <i class="bi bi-exclamation-triangle-fill text-danger me-2 fs-6"></i>
-                        <strong>Validation Notice:</strong> {{ batch.invalid_count }} URL(s) were rejected because they did not match the required Google Maps format.
+                        <strong>Validation Notice:</strong> {{ batch.invalid_count }} row(s) were rejected because they did not match the required Google Maps URL format.
                     </p>
+                    <!-- Show the actual rejected rows -->
+                    <pre class="bg-white p-2 border border-danger rounded-0 mb-0 font-monospace" style="max-height: 150px; overflow-y: auto; font-size: 0.75rem; white-space: pre-wrap;">{{ batch.invalid_urls_log }}</pre>
                 </div>
                 {% endif %}
 
+                <!-- System Error Log (If any) -->
                 {% if batch.error_log %}
                 <div class="p-3 mb-3 border-start border-4 border-warning bg-light" style="border-radius: 4px;">
                     <p class="mb-0 text-dark small font-monospace" style="line-height: 1.6;">
@@ -82,7 +95,17 @@
                 </div>
                 {% endif %}
 
-                <!-- Next Steps -->
+                <!-- Success Message (If 100% Valid) -->
+                {% if batch.invalid_count == 0 and batch.status == 'COMPLETED' %}
+                <div class="p-3 mb-3 border-start border-4 border-success bg-light" style="border-radius: 4px;">
+                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                        <i class="bi bi-check-circle-fill text-success me-2 fs-6"></i>
+                        <strong>All Clear:</strong> Every row in this file was successfully validated and queued for triage.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Next Steps / Authorized Actions -->
                 <div class="mt-4 pt-3 border-top">
                     <h6 class="text-muted text-uppercase small fw-bold mb-3" style="letter-spacing: 0.5px;">Authorized Actions</h6>
                     <div class="d-flex flex-wrap gap-2">
@@ -96,6 +119,15 @@
                 </div>
                 
             </div>
+            
+            <!-- Card Footer: Reference ID -->
+            <div class="card-footer bg-light border-top text-muted small p-3">
+                <div class="d-flex justify-content-between">
+                    <span><i class="bi bi-shield-lock me-1"></i> Audit-ready ingestion record</span>
+                    <span>Batch Ref: <span class="font-monospace">{{ batch.id|stringformat:"s"|slice:":8"|upper }}</span></span>
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>
