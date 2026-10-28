@@ -1,46 +1,130 @@
 {% extends 'base.html' %}
-{% block title %}Client Dashboard{% endblock %}
+{% block title %}Client Performance Report{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold"><i class="bi bi-bar-chart-line me-2"></i>Performance Overview</h2>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">Performance & Compliance Report</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Client Overview • Confidential</small>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-dark rounded-0 py-2 px-3"><i class="bi bi-file-earmark-bar-graph me-2"></i>Report Generated: {% now "F j, Y" %}</span>
+    </div>
 </div>
 
-<div class="row g-4 mb-4">
+<!-- Top Row: Key Performance Indicators -->
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        {% include 'dashboard/partials/stat_card.html' with title="Reports Submitted" value=total_submitted icon="send" color="primary" %}
+        <div class="gov-card h-100 border-start border-4 border-primary">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Reports Submitted</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ total_submitted }}</h2>
+                    </div>
+                    <i class="bi bi-send-fill fs-1 text-primary opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Total official reports filed</small>
+                </div>
+            </div>
+        </div>
     </div>
+    
     <div class="col-md-3">
-        {% include 'dashboard/partials/stat_card.html' with title="Reviews Removed" value=total_removed icon="trash" color="success" %}
+        <div class="gov-card h-100 border-start border-4 border-success">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Reviews Removed</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ total_removed }}</h2>
+                    </div>
+                    <i class="bi bi-trash3-fill fs-1 text-success opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Confirmed removals by platform</small>
+                </div>
+            </div>
+        </div>
     </div>
+
     <div class="col-md-3">
-        {% include 'dashboard/partials/stat_card.html' with title="Reviews Retained" value=total_retained icon="shield-check" color="danger" %}
+        <div class="gov-card h-100 border-start border-4 border-danger">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Reviews Retained</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ total_retained }}</h2>
+                    </div>
+                    <i class="bi bi-shield-fill-exclamation fs-1 text-danger opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Reviews retained by platform</small>
+                </div>
+            </div>
+        </div>
     </div>
+
     <div class="col-md-3">
-        {% include 'dashboard/partials/stat_card.html' with title="Success Rate" value=success_rate|stringformat:"s"|add:"%" icon="graph-up-arrow" color="info" %}
+        <div class="gov-card h-100 border-start border-4 border-info">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Success Rate</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ success_rate }}%</h2>
+                    </div>
+                    <i class="bi bi-graph-up-arrow fs-1 text-info opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Percentage of confirmed removals</small>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row g-4">
+    <!-- Case Status Breakdown -->
     <div class="col-md-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-                <h5 class="fw-bold mb-0"><i class="bi bi-list-check me-2"></i>Case Status Breakdown</h5>
+        <div class="gov-card">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-clipboard-data me-2"></i>Case Disposition Summary</h6>
             </div>
-            <div class="card-body">
-                <div class="row text-center mt-3">
+            <div class="card-body p-4">
+                <div class="row text-center">
                     {% for status in status_counts %}
                     <div class="col-md-3 mb-4">
-                        <div class="p-3 border rounded bg-light">
-                            <h3 class="fw-bold mb-1">{{ status.count }}</h3>
-                            <span class="text-muted text-uppercase small">{{ status.status|title }}</span>
+                        <div class="p-3 border bg-light h-100" style="border-radius: 4px; border-color: #d1d5db !important;">
+                            <h3 class="fw-bold mb-1 text-dark">{{ status.count }}</h3>
+                            <span class="text-muted text-uppercase small fw-bold" style="letter-spacing: 0.5px;">{{ status.status|title }}</span>
                         </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                        No case data available at this time.
                     </div>
                     {% endfor %}
                 </div>
-                <div class="alert alert-info mt-3 mb-0" role="alert">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <strong>Note:</strong> Review removals are ultimately decided by Google's moderation policies. This dashboard tracks the outcomes of the reports submitted on your behalf.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Official Compliance Disclaimer -->
+<div class="row g-4 mt-2">
+    <div class="col-md-12">
+        <div class="p-4 bg-white border-start border-4 border-warning" style="border-radius: 4px;">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-exclamation-triangle-fill fs-2 text-warning"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark text-uppercase mb-2">Official Compliance Notice</h6>
+                    <p class="text-muted small mb-0" style="line-height: 1.6;">
+                        Review removals are ultimately decided by the platform's (Google) moderation policies. This dashboard tracks the outcomes of the reports submitted on your behalf. The Review Compliance System acts as a case management and reporting tool and does not guarantee the removal of any review. All submissions are made through authorized, evidence-based reporting workflows.
+                    </p>
                 </div>
             </div>
         </div>

@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
-from apps.imports.models import ImportBatch
 from django.core.exceptions import ValidationError
+from apps.imports.models import ImportBatch
+
 
 class ReviewCase(models.Model):
     STATUS_CHOICES = [
@@ -14,16 +15,22 @@ class ReviewCase(models.Model):
         ('REMOVED', 'Review Removed'),
         ('RETAINED', 'Review Retained'),
     ]
+    
     canonical_url = models.URLField(unique=True, db_index=True)
     original_url = models.URLField()
     business_label = models.CharField(max_length=255, blank=True, null=True)
-    source_batch = models.ForeignKey(ImportBatch, on_delete=models.SET_NULL, null=True)
+    source_batch = models.ForeignKey(ImportBatch, on_delete=models.SET_NULL, null=True, related_name='cases')
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='NEEDS_TRIAGE', db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
+        verbose_name = "Review Case"
+        verbose_name_plural = "Review Cases"
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
         permissions = [
             ("can_triage", "Can triage cases"),
             ("can_approve", "Can approve cases"),
@@ -31,42 +38,107 @@ class ReviewCase(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.business_label or 'Review'} - {self.get_status_display()}"
+        return f"Case #{self.id} | {self.business_label or 'Unknown Business'} | {self.get_status_display()}"
 
     def clean(self):
-        # Prevent status regression
+        """
+        Enforce strict state machine transitions. 
+        Prevents a case from moving backwards in the workflow.
+        """
         if self.pk:
             old_instance = ReviewCase.objects.get(pk=self.pk)
+            
+            # Prevent reverting an approved case back to triage
             if old_instance.status == 'APPROVED' and self.status == 'NEEDS_TRIAGE':
                 raise ValidationError("Cannot revert an approved case to Needs Triage.")
+            
+            # Prevent re-opening a case that has already been removed by Google
+            if old_instance.status == 'REMOVED' and self.status != 'REMOVED':
+                raise ValidationError("A case marked as 'Removed' cannot be reopened.")
+
+    @property
+    def is_ready_for_submission(self):
+        """Helper used in templates to check if the 'Submit' button should show."""
+        return self.status == 'APPROVED'
+
+    @property
+    def has_active_report(self):
+        """Returns True if a report has already been filed for this case."""
+        return self.status in ['REPORT_RECEIVED', 'REMOVED', 'RETAINED']
+
 
 class PolicyAssessment(models.Model):
     case = models.OneToOneField(ReviewCase, on_delete=models.CASCADE, related_name='assessment')
     category = models.CharField(max_length=100)
     rationale = models.TextField()
     decision = models.CharField(max_length=50) 
-    assessed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    assessed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='assessments')
     assessed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Policy Assessment"
+        verbose_name_plural = "Policy Assessments"
+
+    def __str__(self):
+        return f"Assessment for Case #{self.case.id} - {self.decision}"
+
 
 class Approval(models.Model):
     case = models.OneToOneField(ReviewCase, on_delete=models.CASCADE, related_name='approval')
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    decision = models.BooleanField()
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='approvals_given')
+    decision = models.BooleanField() # True = Approved, False = Rejected
     rationale = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "Approval"
+        verbose_name_plural = "Approvals"
+
+    def __str__(self):
+        return f"Approval for Case #{self.case.id} - {'Approved' if self.decision else 'Rejected'}"
+
+
 class SubmissionAttempt(models.Model):
+    RESULT_CHOICES = [
+        ('SUCCESS', 'Success - Report Received'),
+        ('FAILED', 'Failed - Platform Rejected'),
+        ('ERROR', 'Error - Technical Issue'),
+    ]
+    
     case = models.ForeignKey(ReviewCase, on_delete=models.CASCADE, related_name='submissions')
-    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='submissions')
     submitted_at = models.DateTimeField(auto_now_add=True)
     method = models.CharField(max_length=100)
     receipt_reference = models.CharField(max_length=255)
-    result = models.CharField(max_length=50)
+    result = models.CharField(max_length=50, choices=RESULT_CHOICES)
     error_summary = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = "Submission Attempt"
+        verbose_name_plural = "Submission Attempts"
+
+    def __str__(self):
+        return f"Submission for Case #{self.case.id} - {self.result}"
+
+
 class Outcome(models.Model):
+    OUTCOME_CHOICES = [
+        ('REMOVED', 'Review Removed'),
+        ('RETAINED', 'Review Retained'),
+        ('UNKNOWN', 'Outcome Unknown'),
+    ]
+    
     case = models.ForeignKey(ReviewCase, on_delete=models.CASCADE, related_name='outcomes')
-    outcome_type = models.CharField(max_length=50)
-    source = models.CharField(max_length=100)
+    outcome_type = models.CharField(max_length=50, choices=OUTCOME_CHOICES)
+    source = models.CharField(max_length=100) # e.g., "Manual verification on Google Maps"
     observed_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-observed_at']
+        verbose_name = "Outcome"
+        verbose_name_plural = "Outcomes"
+
+    def __str__(self):
+        return f"Outcome for Case #{self.case.id} - {self.get_outcome_type_display()}"

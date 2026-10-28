@@ -10,26 +10,110 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Custom CSS (Add this block for minor overrides) -->
+    
+    <!-- Professional Government Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Institutional Styles -->
     <style>
-        body { background-color: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; }
-        .navbar-brand { font-weight: 700; letter-spacing: 1px; }
-        .card { border-radius: 0.5rem; }
+        :root {
+            --gov-navy: #1a3a5c;
+            --gov-slate: #2c3e50;
+            --gov-bg: #f4f6f8;
+            --gov-border: #d1d5db;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--gov-bg); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            color: #1f2937;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .navbar-brand { 
+            font-family: 'Merriweather', serif; 
+        }
+
+        /* Navigation Overrides */
+        .navbar-gov {
+            background-color: var(--gov-navy);
+            border-bottom: 4px solid #c9a227; /* Gold accent line */
+        }
+        .navbar-gov .nav-link {
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            color: rgba(255, 255, 255, 0.8) !important;
+            padding: 1rem 1rem !important;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .navbar-gov .nav-link:hover, .navbar-gov .nav-link.active {
+            color: #ffffff !important;
+            border-bottom: 3px solid #c9a227;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Government Card System */
+        .gov-card { 
+            border: 1px solid var(--gov-border); 
+            border-radius: 4px; 
+            box-shadow: none; 
+            background: #ffffff; 
+        }
+        .gov-card-header { 
+            background-color: var(--gov-navy); 
+            color: #ffffff; 
+            border-radius: 3px 3px 0 0; 
+        }
+        .gov-header { 
+            border-bottom: 4px solid var(--gov-navy); 
+            padding-bottom: 0.5rem; 
+            margin-bottom: 2rem; 
+        }
+        
+        /* Data Tables */
+        .table-gov { font-size: 0.875rem; border-color: var(--gov-border); }
+        .table-gov thead { 
+            background-color: #e5e7eb; 
+            color: #1f2937; 
+            text-transform: uppercase; 
+            font-size: 0.75rem; 
+            letter-spacing: 0.05em; 
+        }
+        
         .main-content { flex: 1; }
-        footer { background-color: #212529; color: #adb5bd; }
+
+        /* Institutional Footer */
+        .footer-gov {
+            background-color: var(--gov-slate);
+            color: #9ca3af;
+            border-top: 4px solid #c9a227;
+            font-size: 0.85rem;
+        }
+        .footer-gov a { color: #9ca3af; text-decoration: none; transition: color 0.2s; }
+        .footer-gov a:hover { color: #ffffff; }
+        .footer-gov h6 { color: #ffffff; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <!-- Institutional Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-gov navbar-dark shadow-sm sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">
-                <i class="bi bi-shield-check me-2"></i>ComplianceSys
+            <!-- Far Left: Logo -->
+            <a class="navbar-brand py-2" href="{% url 'dashboard' %}">
+                {% include 'partials/logo.html' %}
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <!-- Mobile Hamburger -->
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -38,19 +122,19 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                            Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if 'cases' in request.path %}active{% endif %}" href="{% url 'cases:case_list' %}">
-                            <i class="bi bi-folder2-open me-1"></i>Cases
+                            Case Files
                         </a>
                     </li>
                     
                     {% if user.is_reviewer %}
                     <li class="nav-item">
                         <a class="nav-link {% if 'imports' in request.path %}active{% endif %}" href="{% url 'imports:upload_csv' %}">
-                            <i class="bi bi-upload me-1"></i>Import Data
+                            Data Import
                         </a>
                     </li>
                     {% endif %}
@@ -58,32 +142,35 @@
                     {% if user.role == 'ADMIN' %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-gear me-1"></i>Administration
+                            Administration
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'accounts:user_list' %}"><i class="bi bi-people me-2"></i>Manage Users</a></li>
-                            <li><a class="dropdown-item" href="{% url 'audit:audit_log_list' %}"><i class="bi bi-journal-text me-2"></i>Audit Logs</a></li>
+                        <ul class="dropdown-menu shadow border-0 rounded-0">
+                            <li><a class="dropdown-item" href="{% url 'accounts:user_list' %}"><i class="bi bi-people me-2"></i>Manage Personnel</a></li>
+                            <li><a class="dropdown-item" href="{% url 'audit:audit_log_list' %}"><i class="bi bi-journal-text me-2"></i>Audit Trail</a></li>
                         </ul>
                     </li>
                     {% endif %}
                 </ul>
                 
-                <!-- Right Side: User Profile & Logout -->
+                <!-- Right Side: User Profile -->
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle me-1"></i>{{ user.username }} 
-                            <span class="badge bg-secondary ms-1">{{ user.get_role_display }}</span>
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle fs-5 me-2"></i>
+                            <div class="d-flex flex-column lh-1 text-start">
+                                <span class="text-white fw-bold" style="font-size: 0.85rem;">{{ user.username }}</span>
+                                <span class="text-warning text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">{{ user.get_role_display }}</span>
+                            </div>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-0">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>Account Profile</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="post" action="{% url 'logout' %}">
                                     {% csrf_token %}
-                                    <button class="dropdown-item text-danger" type="submit">
-                                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                    <button class="dropdown-item text-danger fw-bold" type="submit">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Secure Logout
                                     </button>
                                 </form>
                             </li>
@@ -91,7 +178,7 @@
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="nav-link" href="{% url 'login' %}">Secure Login</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -99,11 +186,11 @@
         </div>
     </nav>
 
-    <!-- Messages (Alerts) -->
+    <!-- System Alerts -->
     <div class="container mt-3">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-start border-4 rounded-0 shadow-sm" role="alert">
                     {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>{% endif %}
                     {% if message.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>{% endif %}
                     {% if message.tags == 'warning' %}<i class="bi bi-exclamation-circle-fill me-2"></i>{% endif %}
@@ -118,14 +205,39 @@
     <!-- Main Content Area -->
     <main class="container my-4 main-content">
         {% block content %}
-        <!-- Child templates will inject content here -->
         {% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="py-3 mt-auto">
-        <div class="container text-center">
-            <small>&copy; {% now "Y" %} ComplianceSys. All rights reserved. Internal Use Only.</small>
+    <!-- Institutional Footer -->
+    <footer class="footer-gov pt-4 pb-3 mt-auto">
+        <div class="container">
+            <div class="row g-4 border-bottom border-secondary pb-4 mb-3">
+                <!-- Column 1: Identity -->
+                <div class="col-md-4">
+                    <h6 class="fw-bold mb-3">Review Compliance System</h6>
+                    <p class="small mb-0">An official case management and triage platform for policy-based review reporting. Authorized personnel only.</p>
+                </div>
+                <!-- Column 2: Quick Links -->
+                <div class="col-md-4">
+                    <h6 class="fw-bold mb-3">System Navigation</h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-1"><a href="{% url 'dashboard' %}">Command Dashboard</a></li>
+                        <li class="mb-1"><a href="{% url 'cases:case_list' %}">Case Repository</a></li>
+                        <li class="mb-1"><a href="{% url 'accounts:profile' %}">Account Settings</a></li>
+                    </ul>
+                </div>
+                <!-- Column 3: Compliance Notice -->
+                <div class="col-md-4">
+                    <h6 class="fw-bold mb-3">Compliance Notice</h6>
+                    <p class="small mb-0">
+                        <i class="bi bi-shield-lock me-1"></i> All activities on this platform are logged and subject to audit. Unauthorized access or usage is strictly prohibited.
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center small text-muted">
+                <span>&copy; {% now "Y" %} ComplianceSys. All Rights Reserved.</span>
+                <span class="mt-2 mt-md-0">System Status: <span class="text-success fw-bold"><i class="bi bi-circle-fill" style="font-size: 0.5rem;"></i> OPERATIONAL</span></span>
+            </div>
         </div>
     </footer>
 

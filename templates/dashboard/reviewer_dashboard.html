@@ -1,51 +1,95 @@
 {% extends 'base.html' %}
-{% block title %}Reviewer Dashboard{% endblock %}
+{% block title %}Reviewer Workspace{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold"><i class="bi bi-clipboard-check me-2"></i>Reviewer Workspace</h2>
+<!-- Government Header -->
+<div class="gov-header d-flex justify-content-between align-items-end">
+    <div>
+        <h2 class="mb-0 text-dark fw-bold">Case Reviewer Workspace</h2>
+        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Triage & Assessment Terminal • Official Use Only</small>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-dark rounded-0 py-2 px-3"><i class="bi bi-person-badge me-2"></i>Reviewer: {{ user.get_full_name|default:user.username }}</span>
+    </div>
 </div>
 
-<div class="row g-4 mb-4">
+<!-- Top Row: Key Metrics -->
+<div class="row g-3 mb-4">
     <div class="col-md-6">
-        {% include 'dashboard/partials/stat_card.html' with title="Awaiting Triage" value=needs_triage_count icon="exclamation-circle" color="warning" subtitle="Cases requiring your assessment" %}
+        <div class="gov-card h-100 border-start border-4 border-warning">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Pending Triage</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ needs_triage_count }}</h2>
+                    </div>
+                    <i class="bi bi-exclamation-triangle-fill fs-1 text-warning opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Cases awaiting your assessment</small>
+                </div>
+            </div>
+        </div>
     </div>
+    
     <div class="col-md-6">
-        {% include 'dashboard/partials/stat_card.html' with title="My Assessments" value=my_assessments_count icon="check2-circle" color="success" subtitle="Total cases you have reviewed" %}
+        <div class="gov-card h-100 border-start border-4 border-success">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted text-uppercase small fw-bold mb-1">Completed Assessments</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ my_assessments_count }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle-fill fs-1 text-success opacity-25"></i>
+                </div>
+                <div class="mt-3 pt-2 border-top">
+                    <small class="text-muted">Total cases you have reviewed</small>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Left: Triage Queue -->
+    <!-- Left: Triage Queue (Data Table) -->
     <div class="col-md-8">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0"><i class="bi bi-inbox me-2"></i>Triage Queue (Oldest First)</h5>
-                <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-sm btn-outline-warning">View Full Queue</a>
+        <div class="gov-card h-100">
+            <div class="gov-card-header p-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-inbox me-2"></i>Triage Queue (Oldest First)</h6>
+                <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-sm btn-light text-dark fw-bold rounded-0">View Full Queue</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="table table-gov table-hover mb-0">
+                        <thead>
                             <tr>
-                                <th>Business</th>
-                                <th>URL</th>
-                                <th>Imported</th>
-                                <th>Action</th>
+                                <th class="ps-3">Business Entity</th>
+                                <th>Target URL</th>
+                                <th>Time in Queue</th>
+                                <th class="text-end pe-3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for case in assigned_queue %}
                             <tr>
-                                <td>{{ case.business_label|default:"Unknown" }}</td>
-                                <td><a href="{{ case.canonical_url }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">{{ case.canonical_url }}</a></td>
-                                <td>{{ case.created_at|timesince }} ago</td>
+                                <td class="ps-3 fw-bold text-dark">{{ case.business_label|default:"Unknown Entity" }}</td>
                                 <td>
-                                    <a href="{% url 'cases:case_detail' case.pk %}" class="btn btn-sm btn-primary">Assess</a>
+                                    <a href="{{ case.canonical_url }}" target="_blank" class="text-muted small text-decoration-none text-truncate d-inline-block" style="max-width: 200px;">
+                                        <i class="bi bi-link-45deg"></i> {{ case.canonical_url }}
+                                    </a>
+                                </td>
+                                <td><small class="text-muted">{{ case.created_at|timesince }} ago</small></td>
+                                <td class="text-end pe-3">
+                                    <a href="{% url 'cases:case_detail' case.pk %}" class="btn btn-sm btn-dark rounded-0 fw-bold px-3">Assess</a>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-4">Triage queue is empty!</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-check2-circle fs-1 d-block mb-2 opacity-50"></i>
+                                    Triage queue is clear. No pending cases.
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -54,24 +98,36 @@
         </div>
     </div>
 
-    <!-- Right: Recently Assessed -->
+    <!-- Right: Recently Assessed Log -->
     <div class="col-md-4">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-                <h5 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Recently Assessed</h5>
+        <div class="gov-card h-100">
+            <div class="gov-card-header p-3">
+                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-clock-history me-2"></i>Recent Assessments</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for case in recently_assessed %}
-                    <li class="list-group-item px-0">
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'cases:case_detail' case.pk %}" class="fw-bold text-decoration-none">{{ case.business_label|default:"Review"|truncatechars:15 }}</a>
-                            <span class="badge {% if case.status == 'ELIGIBLE' %}bg-success{% else %}bg-danger{% endif %}">{{ case.get_status_display }}</span>
+                    <li class="list-group-item px-3 py-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <a href="{% url 'cases:case_detail' case.pk %}" class="fw-bold text-decoration-none text-dark">{{ case.business_label|default:"Review"|truncatechars:18 }}</a>
+                            
+                            {% if case.status == 'ELIGIBLE' %}
+                                <span class="badge badge-gov bg-success">ELIGIBLE</span>
+                            {% elif case.status == 'NOT_ELIGIBLE' %}
+                                <span class="badge badge-gov bg-danger">NOT ELIGIBLE</span>
+                            {% else %}
+                                <span class="badge badge-gov bg-secondary">{{ case.get_status_display|upper }}</span>
+                            {% endif %}
                         </div>
-                        <small class="text-muted">Assessed {{ case.assessment.assessed_at|timesince }} ago</small>
+                        <small class="text-muted text-uppercase" style="font-size: 0.75rem;">
+                            <i class="bi bi-calendar-check me-1"></i> Assessed {{ case.assessment.assessed_at|timesince }} ago
+                        </small>
                     </li>
                     {% empty %}
-                    <li class="list-group-item text-center text-muted px-0">No recent assessments.</li>
+                    <li class="list-group-item text-center text-muted py-5">
+                        <i class="bi bi-journal-x fs-1 d-block mb-2 opacity-50"></i>
+                        No recent assessments on record.
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
