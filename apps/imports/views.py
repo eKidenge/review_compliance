@@ -19,12 +19,14 @@ def upload_csv(request):
             batch.filename = request.FILES['file'].name
             batch.save()
             
-            # Trigger Celery
-            process_import_batch_task.delay(batch.id)
-            messages.success(request, "File uploaded successfully. Processing started.")
-            return redirect('import_summary', pk=batch.pk)
+            # Running synchronously for now (no .delay)
+            process_import_batch_task(batch.id) 
+            
+            messages.success(request, "File uploaded and processed successfully.")
+            return redirect('imports:import_summary', pk=batch.pk)
     else:
         form = ImportBatchForm()
+        
     return render(request, 'imports/upload.html', {'form': form})
 
 @login_required
