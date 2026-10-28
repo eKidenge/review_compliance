@@ -11,6 +11,7 @@ from .forms import AssessmentForm, ApprovalForm, SubmissionForm
 from apps.audit.models import AuditEvent
 from apps.accounts.decorators import role_required
 
+
 @login_required
 def case_list(request):
     """
@@ -40,11 +41,14 @@ def case_list(request):
 
     context = {
         'cases': page_obj,
+        'page_obj': page_obj,           # Passes pagination data to the template
+        'total_count': queryset.count(), # Fixes the "0 Total Cases" bug
         'current_filter': status_filter,
         'search_query': search_query,
         'status_choices': ReviewCase.STATUS_CHOICES
     }
     return render(request, 'cases/list.html', context)
+
 
 @login_required
 def case_detail(request, pk):
@@ -68,6 +72,7 @@ def case_detail(request, pk):
         'submission_form': submission_form,
     }
     return render(request, 'cases/detail.html', context)
+
 
 @role_required(['ADMIN', 'REVIEWER'])
 @transaction.atomic
@@ -112,8 +117,9 @@ def submit_assessment(request, pk):
             messages.success(request, f"Assessment saved. Case marked as {case.get_status_display()}.")
             return redirect('cases:case_detail', pk=pk)
         else:
-            messages.error(request, "There was an error with your assessment form.")
+            messages.error(request, "There was an error with your assessment form. Please check the fields.")
     return redirect('cases:case_detail', pk=pk)
+
 
 @role_required(['ADMIN'])
 @transaction.atomic
@@ -153,6 +159,7 @@ def approve_case(request, pk):
         else:
             messages.error(request, "There was an error with the approval form.")
     return redirect('cases:case_detail', pk=pk)
+
 
 @role_required(['ADMIN', 'SUBMITTER'])
 @transaction.atomic
