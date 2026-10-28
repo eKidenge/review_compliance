@@ -166,6 +166,17 @@ CELERY_TIMEZONE = TIME_ZONE
 
 
 # ==========================================
+# CELERY BEAT SCHEDULE (Automated Google Sheet Sync)
+# ==========================================
+CELERY_BEAT_SCHEDULE = {
+    'sync-google-sheets-every-30-min': {
+        'task': 'apps.imports.tasks.sync_google_sheet_task',
+        'schedule': 1800.0,  # Every 30 minutes (1800 seconds)
+    },
+}
+
+
+# ==========================================
 # AUTHENTICATION REDIRECTS
 # ==========================================
 LOGIN_REDIRECT_URL = 'dashboard'
