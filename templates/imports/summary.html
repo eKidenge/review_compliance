@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Summary{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white py-3 d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-check me-2"></i>Import Batch Summary</h4>
+                <span class="badge bg-light text-dark">{{ batch.status }}</span>
+            </div>
+            <div class="card-body p-4">
+                <h5 class="mb-4 text-truncate">File: <strong>{{ batch.filename }}</strong></h5>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-4 border-end">
+                        <h3 class="fw-bold text-primary">{{ batch.row_count }}</h3>
+                        <small class="text-muted text-uppercase">Total Rows</small>
+                    </div>
+                    <div class="col-4 border-end">
+                        <h3 class="fw-bold text-success">{{ batch.valid_count }}</h3>
+                        <small class="text-muted text-uppercase">Valid & Queued</small>
+                    </div>
+                    <div class="col-4">
+                        <h3 class="fw-bold text-warning">{{ batch.duplicate_count }}</h3>
+                        <small class="text-muted text-uppercase">Duplicates</small>
+                    </div>
+                </div>
+
+                {% if batch.invalid_count > 0 %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>{{ batch.invalid_count }} invalid URLs</strong> were skipped because they did not match the Google Maps format.
+                </div>
+                {% endif %}
+
+                {% if batch.error_log %}
+                <div class="alert alert-warning">
+                    <strong>Processing Error:</strong> {{ batch.error_log }}
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 mt-4">
+                    <a href="{% url 'cases:case_list' %}?status=NEEDS_TRIAGE" class="btn btn-primary">
+                        <i class="bi bi-list-task me-1"></i>Go to Triage Queue
+                    </a>
+                    <a href="{% url 'imports:upload_csv' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-upload me-1"></i>Upload Another File
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

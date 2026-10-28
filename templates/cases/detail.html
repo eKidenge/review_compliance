@@ -1,75 +1,107 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center">
-    <h2>Case #{{ case.id }} Details</h2>
-    <span class="badge bg-secondary fs-5">{{ case.get_status_display }}</span>
-</div>
-<hr>
+{% load crispy_forms_tags %}
 
-<div class="row mt-4">
+{% block title %}Case #{{ case.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Case #{{ case.id }}</h2>
+    <div>
+        <span class="badge fs-6 
+            {% if case.status == 'NEEDS_TRIAGE' %}bg-warning text-dark
+            {% elif case.status == 'ELIGIBLE' %}bg-info text-dark
+            {% elif case.status == 'APPROVED' %}bg-primary
+            {% elif case.status == 'REPORT_RECEIVED' %}bg-success
+            {% elif case.status == 'REMOVED' %}bg-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ case.get_status_display }}
+        </span>
+    </div>
+</div>
+
+<div class="row g-4">
     <!-- Left Column: Case Info -->
     <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header">Target Information</div>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Target Information</h5>
+            </div>
             <div class="card-body">
-                <p><strong>URL:</strong> <a href="{{ case.canonical_url }}" target="_blank">{{ case.canonical_url }}</a></p>
-                <p><strong>Business:</strong> {{ case.business_label|default:"N/A" }}</p>
-                <p><strong>Imported:</strong> {{ case.created_at }}</p>
+                <p class="mb-2"><strong>Business:</strong> {{ case.business_label|default:"N/A" }}</p>
+                <p class="mb-2"><strong>URL:</strong> <br>
+                    <a href="{{ case.canonical_url }}" target="_blank" class="text-break">{{ case.canonical_url }}</a>
+                </p>
+                <p class="mb-0"><strong>Imported:</strong> {{ case.created_at|date:"F j, Y, P" }}</p>
             </div>
         </div>
 
         {% if case.assessment %}
-        <div class="card border-info mb-3">
-            <div class="card-header bg-info text-white">Policy Assessment</div>
+        <div class="card shadow-sm border-0 border-start border-4 border-info mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-clipboard-check me-2"></i>Policy Assessment</h5>
+            </div>
             <div class="card-body">
                 <p><strong>Category:</strong> {{ case.assessment.category }}</p>
                 <p><strong>Rationale:</strong> {{ case.assessment.rationale }}</p>
-                <p><strong>Decision:</strong> {{ case.assessment.decision }}</p>
+                <p class="mb-0"><strong>Decision:</strong> {{ case.assessment.decision }}</p>
+                <hr>
+                <small class="text-muted">Assessed by {{ case.assessment.assessed_by.username }} on {{ case.assessment.assessed_at|date:"M d, Y" }}</small>
             </div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Right Column: Action Forms -->
+    <!-- Right Column: Workflow Actions -->
     <div class="col-md-6">
-        {% if case.status == 'NEEDS_TRIAGE' and user.role in 'ADMIN,REVIEWER' %}
-        <div class="card mb-3">
-            <div class="card-header">Triage Assessment</div>
+        
+        <!-- Triage Form -->
+        {% if case.status == 'NEEDS_TRIAGE' and user.is_reviewer %}
+        <div class="card shadow-sm border-0 border-start border-4 border-warning mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Triage Assessment</h5>
+            </div>
             <div class="card-body">
-                <form method="post" action="{% url 'submit_assessment' case.id %}">
+                <form method="post" action="{% url 'cases:submit_assessment' case.pk %}">
                     {% csrf_token %}
-                    {{ assessment_form.as_p }}
-                    <button type="submit" class="btn btn-primary">Save Assessment</button>
+                    {% crispy assessment_form %}
                 </form>
             </div>
         </div>
         {% endif %}
 
-        {% if case.status == 'ELIGIBLE' and user.role == 'ADMIN' %}
-        <div class="card mb-3 border-success">
-            <div class="card-header bg-success text-white">Approval Required</div>
+        <!-- Approval Form -->
+        {% if case.status == 'ELIGIBLE' and user.is_admin %}
+        <div class="card shadow-sm border-0 border-start border-4 border-primary mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-check2-square me-2"></i>Admin Approval</h5>
+            </div>
             <div class="card-body">
-                <form method="post" action="{% url 'approve_case' case.id %}">
+                <form method="post" action="{% url 'cases:approve_case' case.pk %}">
                     {% csrf_token %}
-                    {{ approval_form.as_p }}
-                    <button type="submit" class="btn btn-success">Approve Case</button>
+                    {% crispy approval_form %}
                 </form>
             </div>
         </div>
         {% endif %}
 
-        {% if case.status == 'APPROVED' and user.role in 'ADMIN,SUBMITTER' %}
-        <div class="card mb-3 border-primary">
-            <div class="card-header bg-primary text-white">Record Submission</div>
+        <!-- Submission Form -->
+        {% if case.status == 'APPROVED' and user.is_submitter %}
+        <div class="card shadow-sm border-0 border-start border-4 border-success mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-send-check me-2"></i>Record Submission Receipt</h5>
+            </div>
             <div class="card-body">
-                <form method="post" action="{% url 'record_submission' case.id %}">
+                <div class="alert alert-info small mb-3">
+                    Submit the report manually on Google, then record the receipt reference here.
+                </div>
+                <form method="post" action="{% url 'cases:record_submission' case.pk %}">
                     {% csrf_token %}
-                    {{ submission_form.as_p }}
-                    <button type="submit" class="btn btn-primary">Record Receipt</button>
+                    {% crispy submission_form %}
                 </form>
             </div>
         </div>
         {% endif %}
+
     </div>
 </div>
 {% endblock %}
