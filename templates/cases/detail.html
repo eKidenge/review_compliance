@@ -1,212 +1,565 @@
+
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}Case File #{{ case.id }}{% endblock %}
 
 {% block content %}
-<!-- Government Header -->
-<div class="gov-header d-flex justify-content-between align-items-end">
-    <div>
-        <h2 class="mb-0 text-dark fw-bold">Case File: #{{ case.id }}</h2>
-        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Official Dossier • Subject to Audit</small>
-    </div>
-    <div class="text-end">
-        <!-- Dynamic Status Stamp -->
-        <span class="badge rounded-0 fs-6 py-2 px-3 border 
-            {% if case.status == 'NEEDS_TRIAGE' %}bg-warning text-dark border-warning
-            {% elif case.status == 'ELIGIBLE' %}bg-info text-dark border-info
-            {% elif case.status == 'NOT_ELIGIBLE' %}bg-secondary border-secondary
-            {% elif case.status == 'APPROVED' %}bg-primary border-primary
-            {% elif case.status == 'REPORT_RECEIVED' %}bg-success border-success
-            {% elif case.status == 'REMOVED' %}bg-dark border-dark
-            {% else %}bg-light text-dark border-secondary{% endif %}" 
-            style="letter-spacing: 1px;">
-            {{ case.get_status_display|upper }}
-        </span>
-    </div>
-</div>
+<div class="container-fluid py-3">
 
-<div class="row g-4">
-    <!-- Left Column: Static Case Information -->
-    <div class="col-md-6">
-        
-        <!-- Target Information Card -->
-        <div class="gov-card mb-4">
-            <div class="gov-card-header p-3">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-info-circle me-2"></i>Subject Target Information</h6>
-            </div>
-            <div class="card-body p-3">
-                <table class="table table-sm table-borderless mb-0">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted text-uppercase small fw-bold" style="width: 35%;">Business Entity:</td>
-                            <td class="fw-bold text-dark">{{ case.business_label|default:"Unidentified Entity" }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted text-uppercase small fw-bold">Target URL:</td>
-                            <td>
-                                <a href="{{ case.canonical_url }}" target="_blank" class="text-break text-decoration-none">
-                                    <i class="bi bi-link-45deg"></i> {{ case.canonical_url }}
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted text-uppercase small fw-bold">Date Imported:</td>
-                            <td>{{ case.created_at|date:"F j, Y, P" }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted text-uppercase small fw-bold">Source Batch:</td>
-                            <td>
-                                {% if case.source_batch %}
-                                    <a href="{% url 'imports:import_summary' case.source_batch.pk %}" class="text-decoration-none">Batch #{{ case.source_batch.id|stringformat:"s"|slice:":8" }}</a>
-                                {% else %}
-                                    <span class="text-muted">Manual Entry</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- Government Header -->
+    <div class="gov-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+        <div>
+            <h2 class="mb-0 text-dark fw-bold">
+                Case File: #{{ case.id }}
+            </h2>
+            <small class="text-muted text-uppercase" style="letter-spacing: 1px;">
+                Official Dossier • Subject to Audit
+            </small>
         </div>
 
-        <!-- Policy Assessment Dossier -->
-        {% if case.assessment %}
-        <div class="gov-card border-start border-4 border-info mb-4">
-            <div class="gov-card-header p-3">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-clipboard-check me-2"></i>Policy Assessment Record</h6>
-            </div>
-            <div class="card-body p-3">
-                <p class="mb-2"><strong class="text-uppercase small text-muted">Category:</strong> <br>{{ case.assessment.category }}</p>
-                <p class="mb-2"><strong class="text-uppercase small text-muted">Decision:</strong> <br>
-                    <span class="badge badge-gov {% if case.assessment.decision == 'ELIGIBLE' %}bg-success{% else %}bg-danger{% endif %}">
-                        {{ case.assessment.decision|upper }}
-                    </span>
-                </p>
-                <p class="mb-3"><strong class="text-uppercase small text-muted">Rationale:</strong> <br>
-                    <span class="text-dark">{{ case.assessment.rationale }}</span>
-                </p>
-                <hr class="my-2">
-                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                    <i class="bi bi-person-badge me-1"></i> Assessed by {{ case.assessment.assessed_by.username }} on {{ case.assessment.assessed_at|date:"M d, Y" }}
-                </small>
-            </div>
+        <div class="text-md-end">
+            <span class="badge rounded-0 fs-6 py-2 px-3 border
+                {% if case.status == 'NEEDS_TRIAGE' %}
+                    bg-warning text-dark border-warning
+                {% elif case.status == 'INSUFFICIENT_EVIDENCE' %}
+                    bg-warning text-dark border-warning
+                {% elif case.status == 'ELIGIBLE' %}
+                    bg-info text-dark border-info
+                {% elif case.status == 'NOT_ELIGIBLE' %}
+                    bg-secondary border-secondary
+                {% elif case.status == 'APPROVED' %}
+                    bg-primary border-primary
+                {% elif case.status == 'REPORT_RECEIVED' %}
+                    bg-success border-success
+                {% elif case.status == 'REMOVED' %}
+                    bg-dark border-dark
+                {% elif case.status == 'RETAINED' %}
+                    bg-light text-dark border-secondary
+                {% else %}
+                    bg-light text-dark border-secondary
+                {% endif %}"
+                style="letter-spacing: 1px;">
+                {{ case.get_status_display|upper }}
+            </span>
         </div>
-        {% endif %}
-
-        <!-- Approval Record -->
-        {% if case.approval %}
-        <div class="gov-card border-start border-4 border-primary mb-4">
-            <div class="gov-card-header p-3">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-check2-square me-2"></i>Administrative Approval</h6>
-            </div>
-            <div class="card-body p-3">
-                <p class="mb-2"><strong class="text-uppercase small text-muted">Rationale:</strong> <br>
-                    <span class="text-dark">{{ case.approval.rationale }}</span>
-                </p>
-                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                    <i class="bi bi-shield-check me-1"></i> Approved by {{ case.approval.approved_by.username }} on {{ case.approval.created_at|date:"M d, Y" }}
-                </small>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Submission Receipts Ledger -->
-        {% if case.submissions.all %}
-        <div class="gov-card border-start border-4 border-success mb-4">
-            <div class="gov-card-header p-3">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-receipt me-2"></i>Filing Receipt Ledger</h6>
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    {% for sub in case.submissions.all %}
-                    <li class="list-group-item p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark">{{ sub.method }}</span>
-                            <span class="badge badge-gov {% if sub.result == 'SUCCESS' %}bg-success{% else %}bg-danger{% endif %}">{{ sub.result|upper }}</span>
-                        </div>
-                        <div class="text-muted small font-monospace mb-1">REF: {{ sub.receipt_reference }}</div>
-                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
-                            <i class="bi bi-clock me-1"></i> Filed by {{ sub.submitted_by.username }} on {{ sub.submitted_at|date:"M d, Y P" }}
-                        </small>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-        {% endif %}
-
     </div>
 
-    <!-- Right Column: Workflow Action Panels -->
-    <div class="col-md-6">
-        
-        <!-- Triage Assessment Form -->
-        {% if case.status == 'NEEDS_TRIAGE' and user.is_reviewer %}
-        <div class="gov-card border-start border-4 border-warning mb-4 shadow-sm">
-            <div class="gov-card-header p-3" style="background-color: #b45309;">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-pencil-square me-2"></i>Required Action: Triage Assessment</h6>
-            </div>
-            <div class="card-body p-4">
-                <p class="text-muted small mb-3">Evaluate the review against the official platform policies. Provide detailed evidence for your decision.</p>
-                <form method="post" action="{% url 'cases:submit_assessment' case.pk %}">
-                    {% csrf_token %}
-                    {% crispy assessment_form %}
-                </form>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Admin Approval Form -->
-        {% if case.status == 'ELIGIBLE' and user.is_admin %}
-        <div class="gov-card border-start border-4 border-primary mb-4 shadow-sm">
-            <div class="gov-card-header p-3">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-shield-lock me-2"></i>Required Action: Administrative Approval</h6>
-            </div>
-            <div class="card-body p-4">
-                <p class="text-muted small mb-3">This case has been marked ELIGIBLE. Review the evidence and approve to authorize submission.</p>
-                <form method="post" action="{% url 'cases:approve_case' case.pk %}">
-                    {% csrf_token %}
-                    {% crispy approval_form %}
-                </form>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Submission Form -->
-        {% if case.status == 'APPROVED' and user.is_submitter %}
-        <div class="gov-card border-start border-4 border-success mb-4 shadow-sm">
-            <div class="gov-card-header p-3" style="background-color: #15803d;">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-send-check me-2"></i>Required Action: File Official Report</h6>
-            </div>
-            <div class="card-body p-4">
-                <div class="p-3 mb-4 border-start border-4 border-success bg-light" style="border-radius: 4px;">
-                    <p class="mb-0 text-dark small" style="line-height: 1.6;">
-                        <i class="bi bi-info-circle-fill text-success me-2 fs-6"></i>
-                        Submit the report manually on the Google platform. Once confirmed, record the official receipt ID below to update the case status.
-                    </p>
+    <!-- Django Messages -->
+    {% if messages %}
+        <div class="mb-4" aria-live="polite">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-0" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                <form method="post" action="{% url 'cases:record_submission' case.pk %}">
-                    {% csrf_token %}
-                    {% crispy submission_form %}
-                </form>
-            </div>
+            {% endfor %}
         </div>
-        {% endif %}
+    {% endif %}
 
-        <!-- Terminal State (If no action is available) -->
-        {% if case.status == 'REPORT_RECEIVED' or case.status == 'REMOVED' or case.status == 'NOT_ELIGIBLE' %}
-        <div class="gov-card border-start border-4 border-secondary mb-4">
-            <div class="gov-card-header p-3" style="background-color: #4b5563;">
-                <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-lock-fill me-2"></i>Case Finalized</h6>
+    <div class="row g-4">
+
+        <!-- LEFT COLUMN: CASE RECORDS -->
+        <div class="col-12 col-lg-6">
+
+            <!-- Target Information Card -->
+            <div class="gov-card mb-4">
+                <div class="gov-card-header p-3">
+                    <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                        <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+                        Subject Target Information
+                    </h6>
+                </div>
+
+                <div class="card-body p-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold" style="width: 35%;">
+                                        Case Reference:
+                                    </td>
+                                    <td class="fw-bold text-dark">
+                                        #{{ case.id }}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Business Entity:
+                                    </td>
+                                    <td class="fw-bold text-dark">
+                                        {{ case.business_label|default:"Unidentified Entity" }}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Target URL:
+                                    </td>
+                                    <td class="text-break">
+                                        <a
+                                            href="{{ case.canonical_url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-decoration-none"
+                                        >
+                                            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                            {{ case.canonical_url }}
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Original URL:
+                                    </td>
+                                    <td class="text-break">
+                                        <a
+                                            href="{{ case.original_url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-decoration-none"
+                                        >
+                                            View Original URL
+                                            <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Date Imported:
+                                    </td>
+                                    <td>
+                                        {{ case.created_at|date:"F j, Y, P" }}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Last Updated:
+                                    </td>
+                                    <td>
+                                        {{ case.updated_at|date:"F j, Y, P" }}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Source Batch:
+                                    </td>
+                                    <td>
+                                        {% if case.source_batch %}
+                                            <a
+                                                href="{% url 'imports:import_summary' case.source_batch.pk %}"
+                                                class="text-decoration-none"
+                                            >
+                                                Batch #{{ case.source_batch.id|stringformat:"s"|slice:":8" }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Manual Entry</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="text-muted text-uppercase small fw-bold">
+                                        Current Status:
+                                    </td>
+                                    <td>
+                                        {{ case.get_status_display }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-4 text-center">
-                <i class="bi bi-check-circle fs-1 text-success mb-3"></i>
-                <h5 class="text-uppercase fw-bold">No Further Action Required</h5>
-                <p class="text-muted small mb-0">This case file has reached its final disposition. All actions are logged and subject to audit.</p>
+
+            <!-- Policy Assessment Dossier -->
+            {% if case.assessment %}
+                <div class="gov-card border-start border-4 border-info mb-4">
+                    <div class="gov-card-header p-3">
+                        <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                            <i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>
+                            Policy Assessment Record
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-3">
+                        <p class="mb-3">
+                            <strong class="text-uppercase small text-muted">Category:</strong>
+                            <br>
+                            {{ case.assessment.get_category_display }}
+                        </p>
+
+                        <p class="mb-3">
+                            <strong class="text-uppercase small text-muted">Decision:</strong>
+                            <br>
+                            {% if case.assessment.decision == 'ELIGIBLE' %}
+                                <span class="badge badge-gov bg-success">
+                                    {{ case.assessment.get_decision_display }}
+                                </span>
+                            {% elif case.assessment.decision == 'NOT_ELIGIBLE' %}
+                                <span class="badge badge-gov bg-secondary">
+                                    {{ case.assessment.get_decision_display }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-gov bg-warning text-dark">
+                                    {{ case.assessment.get_decision_display }}
+                                </span>
+                            {% endif %}
+                        </p>
+
+                        <p class="mb-3">
+                            <strong class="text-uppercase small text-muted">Rationale:</strong>
+                            <br>
+                            <span class="text-dark" style="white-space: pre-wrap;">{{ case.assessment.rationale }}</span>
+                        </p>
+
+                        <hr class="my-2">
+
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                            <i class="bi bi-person-badge me-1" aria-hidden="true"></i>
+                            Assessed by {{ case.assessment.assessed_by.username }}
+                            on {{ case.assessment.assessed_at|date:"M d, Y P" }}
+                        </small>
+                    </div>
+                </div>
+            {% else %}
+                <div class="gov-card mb-4">
+                    <div class="card-body p-3">
+                        <h6 class="text-uppercase fw-bold text-muted">
+                            <i class="bi bi-clipboard-x me-2" aria-hidden="true"></i>
+                            Policy Assessment
+                        </h6>
+                        <p class="small text-muted mb-0">
+                            No policy assessment has been recorded for this case.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Administrative Approval Record -->
+            {% if case.approval %}
+                <div class="gov-card border-start border-4 border-primary mb-4">
+                    <div class="gov-card-header p-3">
+                        <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                            <i class="bi bi-check2-square me-2" aria-hidden="true"></i>
+                            Administrative Approval
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-3">
+                        <p class="mb-3">
+                            <strong class="text-uppercase small text-muted">Decision:</strong>
+                            <br>
+                            {% if case.approval.decision %}
+                                <span class="badge bg-success">APPROVED</span>
+                            {% else %}
+                                <span class="badge bg-secondary">REJECTED</span>
+                            {% endif %}
+                        </p>
+
+                        <p class="mb-3">
+                            <strong class="text-uppercase small text-muted">Rationale:</strong>
+                            <br>
+                            <span class="text-dark" style="white-space: pre-wrap;">{{ case.approval.rationale }}</span>
+                        </p>
+
+                        <hr class="my-2">
+
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                            <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+                            Reviewed by {{ case.approval.approved_by.username }}
+                            on {{ case.approval.created_at|date:"M d, Y P" }}
+                        </small>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Submission Receipts Ledger -->
+            <div class="gov-card border-start border-4 border-success mb-4">
+                <div class="gov-card-header p-3">
+                    <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                        <i class="bi bi-receipt me-2" aria-hidden="true"></i>
+                        Filing Receipt Ledger
+                    </h6>
+                </div>
+
+                <div class="card-body p-0">
+                    {% for sub in case.submissions.all %}
+                        <div class="p-3 border-bottom">
+                            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                                <span class="fw-bold text-dark">
+                                    {{ sub.method }}
+                                </span>
+
+                                {% if sub.result == 'SUCCESS' %}
+                                    <span class="badge bg-success">SUCCESS</span>
+                                {% elif sub.result == 'FAILED' %}
+                                    <span class="badge bg-danger">FAILED</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">TECHNICAL ERROR</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-muted small font-monospace mb-2 text-break">
+                                Reference: {{ sub.receipt_reference }}
+                            </div>
+
+                            {% if sub.error_summary %}
+                                <div class="alert alert-light border rounded-0 small mb-2">
+                                    <strong>Recorded details:</strong>
+                                    {{ sub.error_summary }}
+                                </div>
+                            {% endif %}
+
+                            <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                                <i class="bi bi-clock me-1" aria-hidden="true"></i>
+                                Recorded by {{ sub.submitted_by.username }}
+                                on {{ sub.submitted_at|date:"M d, Y P" }}
+                            </small>
+                        </div>
+                    {% empty %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-receipt fs-2 d-block mb-2" aria-hidden="true"></i>
+                            <p class="small mb-0">No submission attempts have been recorded.</p>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
+
+            <!-- Outcome History -->
+            <div class="gov-card border-start border-4 border-secondary mb-4">
+                <div class="gov-card-header p-3">
+                    <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                        <i class="bi bi-journal-check me-2" aria-hidden="true"></i>
+                        Verified Outcome History
+                    </h6>
+                </div>
+
+                <div class="card-body p-0">
+                    {% for outcome in case.outcomes.all %}
+                        <div class="p-3 border-bottom">
+                            <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-2">
+                                <strong class="text-dark">
+                                    {{ outcome.get_outcome_type_display }}
+                                </strong>
+
+                                <span class="badge bg-light text-dark border">
+                                    {{ outcome.source }}
+                                </span>
+                            </div>
+
+                            {% if outcome.notes %}
+                                <p class="small text-muted mb-2" style="white-space: pre-wrap;">{{ outcome.notes }}</p>
+                            {% endif %}
+
+                            <small class="text-muted">
+                                <i class="bi bi-clock me-1" aria-hidden="true"></i>
+                                Observed {{ outcome.observed_at|date:"M d, Y P" }}
+                            </small>
+                        </div>
+                    {% empty %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-hourglass-split fs-2 d-block mb-2" aria-hidden="true"></i>
+                            <p class="small mb-0">
+                                No outcome has been recorded yet.
+                            </p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
         </div>
-        {% endif %}
 
+        <!-- RIGHT COLUMN: WORKFLOW ACTIONS -->
+        <div class="col-12 col-lg-6">
+
+            <!-- Triage Assessment Form -->
+            {% if case.status == 'NEEDS_TRIAGE' and user.is_reviewer %}
+                <div class="gov-card border-start border-4 border-warning mb-4 shadow-sm">
+                    <div class="gov-card-header p-3" style="background-color: #b45309;">
+                        <h6 class="mb-0 text-uppercase fw-bold text-white" style="letter-spacing: 1px;">
+                            <i class="bi bi-pencil-square me-2" aria-hidden="true"></i>
+                            Required Action: Triage Assessment
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-3">
+                            Evaluate the available evidence against the relevant platform policies.
+                            Record a reasoned decision supported by specific evidence.
+                        </p>
+
+                        <form method="post" action="{% url 'cases:submit_assessment' case.pk %}">
+                            {% csrf_token %}
+                            {% crispy assessment_form %}
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Administrative Approval Form -->
+            {% if case.status == 'ELIGIBLE' and user.is_admin %}
+                <div class="gov-card border-start border-4 border-primary mb-4 shadow-sm">
+                    <div class="gov-card-header p-3">
+                        <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                            <i class="bi bi-shield-lock me-2" aria-hidden="true"></i>
+                            Required Action: Administrative Approval
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-3">
+                            Review the assessment and supporting evidence before making
+                            an independent administrative decision.
+                        </p>
+
+                        <form method="post" action="{% url 'cases:approve_case' case.pk %}">
+                            {% csrf_token %}
+                            {% crispy approval_form %}
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Submission Form -->
+            {% if case.status == 'APPROVED' and user.is_submitter %}
+                <div class="gov-card border-start border-4 border-success mb-4 shadow-sm">
+                    <div class="gov-card-header p-3" style="background-color: #15803d;">
+                        <h6 class="mb-0 text-uppercase fw-bold text-white" style="letter-spacing: 1px;">
+                            <i class="bi bi-send-check me-2" aria-hidden="true"></i>
+                            Required Action: Record Official Report
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="p-3 mb-4 border-start border-4 border-success bg-light" style="border-radius: 4px;">
+                            <p class="mb-0 text-dark small" style="line-height: 1.6;">
+                                <i class="bi bi-info-circle-fill text-success me-2" aria-hidden="true"></i>
+                                Record the details of a report actually submitted through the
+                                platform's official reporting process. Use the genuine receipt
+                                or confirmation reference where available.
+                            </p>
+                        </div>
+
+                        <form method="post" action="{% url 'cases:record_submission' case.pk %}">
+                            {% csrf_token %}
+                            {% crispy submission_form %}
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Additional Workflow Information -->
+            {% if case.status == 'INSUFFICIENT_EVIDENCE' %}
+                <div class="gov-card border-start border-4 border-warning mb-4">
+                    <div class="gov-card-header p-3">
+                        <h6 class="mb-0 text-uppercase fw-bold">
+                            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+                            Additional Evidence Required
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-0">
+                            The current assessment indicates that there is not enough
+                            evidence to reach a conclusion. Review the available evidence
+                            before taking further action.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Finalized Case Information -->
+            {% if case.status == 'REPORT_RECEIVED' or case.status == 'REMOVED' or case.status == 'RETAINED' or case.status == 'NOT_ELIGIBLE' %}
+                <div class="gov-card border-start border-4 border-secondary mb-4">
+                    <div class="gov-card-header p-3" style="background-color: #4b5563;">
+                        <h6 class="mb-0 text-uppercase fw-bold text-white" style="letter-spacing: 1px;">
+                            <i class="bi bi-journal-check me-2" aria-hidden="true"></i>
+                            Case Status Summary
+                        </h6>
+                    </div>
+
+                    <div class="card-body p-4 text-center">
+                        {% if case.status == 'REMOVED' %}
+                            <i class="bi bi-check-circle fs-1 text-success d-block mb-3" aria-hidden="true"></i>
+                            <h5 class="text-uppercase fw-bold">Removal Recorded</h5>
+                            <p class="text-muted small mb-0">
+                                The case is marked as removed. Refer to the outcome history
+                                for the recorded verification details.
+                            </p>
+
+                        {% elif case.status == 'RETAINED' %}
+                            <i class="bi bi-shield-check fs-1 text-secondary d-block mb-3" aria-hidden="true"></i>
+                            <h5 class="text-uppercase fw-bold">Review Retained</h5>
+                            <p class="text-muted small mb-0">
+                                The recorded outcome indicates that the review remains
+                                available on the platform.
+                            </p>
+
+                        {% elif case.status == 'REPORT_RECEIVED' %}
+                            <i class="bi bi-receipt fs-1 text-success d-block mb-3" aria-hidden="true"></i>
+                            <h5 class="text-uppercase fw-bold">Report Recorded</h5>
+                            <p class="text-muted small mb-0">
+                                A report submission has been recorded. This status does not
+                                by itself confirm that the review has been removed.
+                            </p>
+
+                        {% else %}
+                            <i class="bi bi-x-circle fs-1 text-secondary d-block mb-3" aria-hidden="true"></i>
+                            <h5 class="text-uppercase fw-bold">Not Eligible</h5>
+                            <p class="text-muted small mb-0">
+                                The case has been classified as not eligible for submission
+                                based on its recorded assessment.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Audit Information -->
+            <div class="gov-card mb-4">
+                <div class="gov-card-header p-3">
+                    <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                        <i class="bi bi-shield-check me-2" aria-hidden="true"></i>
+                        Audit Information
+                    </h6>
+                </div>
+
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between gap-3 mb-2">
+                        <span class="small text-muted">Case ID</span>
+                        <span class="small fw-bold">#{{ case.pk }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-3 mb-2">
+                        <span class="small text-muted">Created</span>
+                        <span class="small">{{ case.created_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-3">
+                        <span class="small text-muted">Last Updated</span>
+                        <span class="small">{{ case.updated_at|date:"Y-m-d H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Return to Repository -->
+            <div class="d-grid mb-4">
+                <a
+                    href="{% url 'cases:case_list' %}"
+                    class="btn btn-outline-dark rounded-0 fw-bold"
+                >
+                    <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+                    Return to Case Repository
+                </a>
+            </div>
+
+        </div>
     </div>
 </div>
 {% endblock %}

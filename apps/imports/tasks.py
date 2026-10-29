@@ -1,12 +1,14 @@
+
 import csv
 import logging
-import openpyxl
-import gspread
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
-from urllib.parse import urlparse
+import gspread
+import openpyxl
 
 from celery import shared_task
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from google.oauth2.service_account import Credentials
 
@@ -22,58 +24,190 @@ ALLOWED_DOMAINS = {
     "goo.gl",
 }
 
+BATCH_SIZE = 500
+INVALID_LOG_LIMIT = 5000
 
-def is_valid_google_url(url: str) -> bool:
-    """
-    Validate Google review URL.
-    """
+
+def normalize_google_url(value):
+    """Validate and normalize a Google URL for consistent deduplication."""
+    if not isinstance(value, str):
+        return None
+
+    value = value.strip()
+    if not value or len(value) > 8192:
+        return None
+
     try:
-        parsed = urlparse(url)
+        parsed = urlparse(value)
 
-        if parsed.scheme not in ("http", "https"):
-            return False
+        if parsed.scheme.lower() not in {"http", "https"}:
+            return None
 
-        host = parsed.netloc.lower()
+        # Reject credentials and malformed URLs.
+        if parsed.username is not None or parsed.password is not None:
+            return None
 
-        return any(
-            host == domain or host.endswith(f".{domain}")
+        host = (parsed.hostname or "").lower().rstrip(".")
+
+        if not host:
+            return None
+
+        if not any(
+            host == domain or host.endswith("." + domain)
             for domain in ALLOWED_DOMAINS
+        ):
+            return None
+
+        # Accessing port also detects malformed port values.
+        _ = parsed.port
+
+        # Fragments don't identify a different server-side resource.
+        normalized = parsed._replace(
+            scheme="https",
+            netloc=host,
+            fragment="",
         )
 
-    except Exception:
-        return False
+        return urlunparse(normalized)
+
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def is_valid_google_url(url):
+    """Backward-compatible validation helper."""
+    return normalize_google_url(url) is not None
 
 
 def load_urls_from_file(file_path):
-    """
-    Extract URLs from CSV or XLSX.
-    """
+    """Read URLs from the first column of CSV or XLSX files."""
+    path = Path(file_path)
+    suffix = path.suffix.lower()
     urls = []
 
-    if file_path.endswith(".csv"):
-        with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.reader(f)
-            next(reader, None)
-            for row in reader:
-                if not row:
-                    continue
-                value = str(row[0]).strip()
-                if value:
-                    urls.append(value)
+    if suffix == ".csv":
+        with path.open(
+            "r", encoding="utf-8-sig", newline=""
+        ) as file:
+            reader = csv.reader(file)
 
-    elif file_path.endswith(".xlsx"):
-        workbook = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
-        sheet = workbook.active
-        for row in sheet.iter_rows(min_row=1, values_only=True):
-            if not row:
-                continue
-            value = row[0]
-            if value:
-                urls.append(str(value).strip())
+            # Preserve the existing convention that row one is a header.
+            next(reader, None)
+
+            for row in reader:
+                if row and row[0] is not None:
+                    urls.append(str(row[0]).strip())
+
+    elif suffix == ".xlsx":
+        workbook = openpyxl.load_workbook(
+            path,
+            read_only=True,
+            data_only=True,
+        )
+
+        try:
+            sheet = workbook.active
+
+            for row in sheet.iter_rows(
+                min_row=2,
+                min_col=1,
+                max_col=1,
+                values_only=True,
+            ):
+                value = row[0]
+
+                if value is not None:
+                    urls.append(str(value).strip())
+        finally:
+            workbook.close()
+
     else:
-        raise ValueError(f"Unsupported file type: {file_path}")
+        raise ValueError(
+            f"Unsupported file type: {suffix}"
+        )
 
     return urls
+
+
+def prepare_case_import(raw_urls, batch):
+    """Validate and deduplicate URLs before writing to the database."""
+    existing_urls = set(
+        ReviewCase.objects.values_list(
+            "canonical_url", flat=True
+        )
+    )
+
+    seen_urls = set()
+    cases = []
+    invalid_urls = []
+    duplicates = 0
+    invalid = 0
+
+    for raw_url in raw_urls:
+        normalized = normalize_google_url(raw_url)
+
+        if normalized is None:
+            invalid += 1
+            invalid_urls.append(str(raw_url)[:8192])
+            continue
+
+        if normalized in seen_urls or normalized in existing_urls:
+            duplicates += 1
+            continue
+
+        seen_urls.add(normalized)
+
+        cases.append(
+            ReviewCase(
+                canonical_url=normalized,
+                original_url=str(raw_url).strip(),
+                source_batch=batch,
+                status="NEEDS_TRIAGE",
+            )
+        )
+
+    return cases, invalid_urls, duplicates, invalid
+
+
+def save_import_cases(cases):
+    """Insert cases in bounded batches within a transaction."""
+    created = 0
+
+    with transaction.atomic():
+        for offset in range(0, len(cases), BATCH_SIZE):
+            chunk = cases[offset:offset + BATCH_SIZE]
+
+            # An IntegrityError is not silently swallowed. A database
+            # uniqueness constraint should protect against concurrent jobs.
+            ReviewCase.objects.bulk_create(
+                chunk,
+                batch_size=BATCH_SIZE,
+            )
+            created += len(chunk)
+
+    return created
+
+
+def finalize_batch(
+    batch,
+    row_count,
+    created_count,
+    duplicate_count,
+    invalid_count,
+    invalid_urls,
+):
+    batch.row_count = row_count
+    batch.valid_count = created_count
+    batch.duplicate_count = duplicate_count
+    batch.invalid_count = invalid_count
+    batch.invalid_urls_log = "\n".join(
+        invalid_urls[:INVALID_LOG_LIMIT]
+    )
+    batch.status = "COMPLETED"
+    batch.completed_at = timezone.now()
+    batch.error_log = ""
+
+    batch.save()
 
 
 @shared_task(bind=True, max_retries=3)
@@ -83,213 +217,215 @@ def process_import_batch_task(self, batch_id):
     try:
         batch = ImportBatch.objects.get(id=batch_id)
 
-        # NEW: Set source_type based on the file extension
-        if batch.file and batch.file.path.endswith(".xlsx"):
-            batch.source_type = "XLSX"
-        else:
-            batch.source_type = "CSV"
-
         batch.status = "PROCESSING"
         batch.error_log = ""
-        batch.save(update_fields=["status", "error_log", "source_type"])
 
-        logger.info("Processing batch %s", batch_id)
+        if batch.file:
+            suffix = Path(batch.file.name).suffix.lower()
+
+            if suffix == ".xlsx":
+                batch.source_type = "XLSX"
+            elif suffix == ".csv":
+                batch.source_type = "CSV"
+            else:
+                raise ValueError(
+                    f"Unsupported import file: {suffix}"
+                )
+
+        batch.save(
+            update_fields=[
+                "status",
+                "error_log",
+                "source_type",
+            ]
+        )
+
+        logger.info("Processing import batch %s", batch_id)
 
         raw_urls = load_urls_from_file(batch.file.path)
 
-        existing_urls = set(
-            ReviewCase.objects.values_list("canonical_url", flat=True)
+        cases, invalid_urls, duplicates, invalid = (
+            prepare_case_import(raw_urls, batch)
         )
 
-        processed_urls = set()
-        invalid_urls = []
-        duplicate_count = 0
-        invalid_count = 0
-        cases_to_create = []
+        created = save_import_cases(cases)
 
-        for url in raw_urls:
-            if not url.startswith("http"):
-                invalid_count += 1
-                invalid_urls.append(url)
-                continue
+        finalize_batch(
+            batch=batch,
+            row_count=len(raw_urls),
+            created_count=created,
+            duplicate_count=duplicates,
+            invalid_count=invalid,
+            invalid_urls=invalid_urls,
+        )
 
-            if not is_valid_google_url(url):
-                invalid_count += 1
-                invalid_urls.append(url)
-                continue
-
-            if url in processed_urls or url in existing_urls:
-                duplicate_count += 1
-                continue
-
-            processed_urls.add(url)
-
-            cases_to_create.append(
-                ReviewCase(
-                    canonical_url=url,
-                    original_url=url,
-                    source_batch=batch,
-                    status="NEEDS_TRIAGE"
-                )
-            )
-
-        created_count = 0
-
-        with transaction.atomic():
-            BATCH_SIZE = 1000
-            for i in range(0, len(cases_to_create), BATCH_SIZE):
-                chunk = cases_to_create[i:i + BATCH_SIZE]
-                ReviewCase.objects.bulk_create(chunk, batch_size=BATCH_SIZE)
-            created_count = len(cases_to_create)
-
-        batch.row_count = len(raw_urls)
-        batch.valid_count = created_count
-        batch.invalid_count = invalid_count
-        batch.duplicate_count = duplicate_count
-        batch.invalid_urls_log = "\n".join(invalid_urls[:5000])
-        batch.status = "COMPLETED"
-        batch.completed_at = timezone.now()
-        batch.save()
-
-        logger.info("Batch %s completed. %s cases created.", batch_id, created_count)
+        logger.info(
+            "Import %s completed: rows=%s, created=%s, "
+            "duplicates=%s, invalid=%s",
+            batch_id,
+            len(raw_urls),
+            created,
+            duplicates,
+            invalid,
+        )
 
         return {
-            "batch_id": batch_id,
+            "batch_id": str(batch_id),
             "rows": len(raw_urls),
-            "created": created_count,
-            "duplicates": duplicate_count,
-            "invalid": invalid_count,
+            "created": created,
+            "duplicates": duplicates,
+            "invalid": invalid,
         }
 
     except Exception as exc:
-        logger.exception("Import batch failed: %s", batch_id)
+        logger.exception("Import batch %s failed", batch_id)
+
+        # Celery's retry count is authoritative for this task attempt.
+        if self.request.retries < self.max_retries:
+            if batch:
+                batch.status = "PROCESSING"
+                batch.error_log = (
+                    f"Attempt {self.request.retries + 1} failed: "
+                    f"{str(exc)[:4000]}"
+                )
+                batch.save(
+                    update_fields=["status", "error_log"]
+                )
+
+            raise self.retry(
+                exc=exc,
+                countdown=60 * (self.request.retries + 1),
+            )
 
         if batch:
             batch.status = "FAILED"
-            batch.error_log = str(exc)
+            batch.error_log = str(exc)[:4000]
             batch.completed_at = timezone.now()
-            batch.retry_count += 1  # NEW: Increment retry counter
-            batch.save(update_fields=["status", "error_log", "completed_at", "retry_count"])
+            batch.retry_count = (
+                batch.retry_count + 1
+            )
+            batch.save(
+                update_fields=[
+                    "status",
+                    "error_log",
+                    "completed_at",
+                    "retry_count",
+                ]
+            )
 
-        raise self.retry(exc=exc, countdown=60)
+        raise
 
 
-@shared_task
-def sync_google_sheet_task(source_id=None):
-    """
-    Syncs one (or all) active Google Sheets into the ReviewCase database.
-    This task is scheduled by Celery Beat to run every 30 minutes (see settings.py).
-    """
-    if source_id:
-        sources = GoogleSheetSource.objects.filter(id=source_id, is_active=True)
+@shared_task(bind=True, max_retries=3)
+def sync_google_sheet_task(self, source_id=None):
+    """Synchronize active Google Sheets into ReviewCase records."""
+    if source_id is not None:
+        sources = GoogleSheetSource.objects.filter(
+            id=source_id,
+            is_active=True,
+        )
     else:
-        sources = GoogleSheetSource.objects.filter(is_active=True)
+        sources = GoogleSheetSource.objects.filter(
+            is_active=True
+        )
+
+    results = []
 
     for source in sources:
-        # NEW: Create an ImportBatch record for each sync attempt
         batch = None
 
         try:
-            logger.info(f"Starting sync for Google Sheet: {source.name}")
+            logger.info("Starting sheet sync: %s", source.name)
 
-            # Create the ImportBatch tracking record
             batch = ImportBatch.objects.create(
                 filename=f"SYNC: {source.name}",
                 source_type="GOOGLE_SHEET",
                 status="PROCESSING",
-                uploaded_by=None, # System-initiated sync
+                uploaded_by=None,
             )
 
-            # 1. Authenticate using the stored Service Account JSON
-            scope = [
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive"
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets.readonly",
             ]
-            creds = Credentials.from_service_account_info(
+
+            credentials = Credentials.from_service_account_info(
                 source.credentials_json,
-                scopes=scope
+                scopes=scopes,
             )
-            client = gspread.authorize(creds)
 
-            # 2. Open the sheet and read all values
-            sheet = client.open_by_key(source.spreadsheet_id).worksheet(source.sheet_name)
-            all_values = sheet.get_all_values()
+            client = gspread.authorize(credentials)
 
-            if not all_values:
-                logger.warning(f"Sheet {source.name} is empty. Skipping.")
-                batch.status = "FAILED"
-                batch.error_log = "Sheet is empty."
-                batch.completed_at = timezone.now()
-                batch.save()
-                continue
+            worksheet = client.open_by_key(
+                source.spreadsheet_id
+            ).worksheet(source.sheet_name)
 
-            # 3. Extract URLs (skipping the header row)
+            values = worksheet.get_all_values()
+
+            if not values:
+                raise ValueError("Google Sheet is empty.")
+
+            # First row is treated as a header, matching the
+            # existing application convention.
             raw_urls = [
                 str(row[0]).strip()
-                for row in all_values[1:]
+                for row in values[1:]
                 if row and row[0]
             ]
 
-            # 4. Validate and deduplicate against existing DB
-            existing_urls = set(
-                ReviewCase.objects.values_list("canonical_url", flat=True)
+            cases, invalid_urls, duplicates, invalid = (
+                prepare_case_import(raw_urls, batch)
             )
-            cases_to_create = []
-            invalid_count = 0
-            duplicate_count = 0
-            invalid_urls = []
 
-            for url in raw_urls:
-                if not url.startswith("http") or not is_valid_google_url(url):
-                    invalid_count += 1
-                    invalid_urls.append(url)
-                    continue
-                if url in existing_urls:
-                    duplicate_count += 1
-                    continue
+            created = save_import_cases(cases)
 
-                cases_to_create.append(
-                    ReviewCase(
-                        canonical_url=url,
-                        original_url=url,
-                        source_batch=batch,
-                        status="NEEDS_TRIAGE"
-                    )
-                )
-                existing_urls.add(url)
-
-            # 5. Bulk create inside a transaction
-            with transaction.atomic():
-                BATCH_SIZE = 1000
-                for i in range(0, len(cases_to_create), BATCH_SIZE):
-                    chunk = cases_to_create[i:i + BATCH_SIZE]
-                    ReviewCase.objects.bulk_create(chunk, batch_size=BATCH_SIZE)
+            finalize_batch(
+                batch=batch,
+                row_count=len(raw_urls),
+                created_count=created,
+                duplicate_count=duplicates,
+                invalid_count=invalid,
+                invalid_urls=invalid_urls,
+            )
 
             source.last_synced_at = timezone.now()
-            source.save()
+            source.save(update_fields=["last_synced_at"])
 
-            # Finalize the batch record
-            batch.row_count = len(raw_urls)
-            batch.valid_count = len(cases_to_create)
-            batch.invalid_count = invalid_count
-            batch.duplicate_count = duplicate_count
-            batch.invalid_urls_log = "\n".join(invalid_urls[:5000])
-            batch.status = "COMPLETED"
-            batch.completed_at = timezone.now()
-            batch.save()
+            results.append({
+                "source_id": str(source.id),
+                "status": "COMPLETED",
+                "created": created,
+                "duplicates": duplicates,
+                "invalid": invalid,
+            })
 
             logger.info(
-                f"Sync complete for {source.name}. "
-                f"Created: {len(cases_to_create)}, "
-                f"Duplicates: {duplicate_count}, "
-                f"Invalid: {invalid_count}"
+                "Sheet sync completed: %s; created=%s",
+                source.name,
+                created,
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to sync Google Sheet: {source.name}")
-            
+        except Exception as exc:
+            logger.exception(
+                "Google Sheet sync failed: %s",
+                source.name,
+            )
+
             if batch:
                 batch.status = "FAILED"
-                batch.error_log = str(e)
+                batch.error_log = str(exc)[:4000]
                 batch.completed_at = timezone.now()
-                batch.save(update_fields=["status", "error_log", "completed_at"])
+                batch.save(
+                    update_fields=[
+                        "status",
+                        "error_log",
+                        "completed_at",
+                    ]
+                )
+
+            results.append({
+                "source_id": str(source.id),
+                "status": "FAILED",
+                "error": str(exc)[:1000],
+            })
+
+    return results

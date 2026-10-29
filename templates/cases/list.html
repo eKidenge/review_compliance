@@ -1,108 +1,289 @@
+
 {% extends 'base.html' %}
 
 {% block title %}Case Repository{% endblock %}
 
 {% block content %}
-<!-- Government Header -->
-<div class="gov-header d-flex justify-content-between align-items-end">
-    <div>
-        <h2 class="mb-0 text-dark fw-bold">Case Repository</h2>
-        <small class="text-muted text-uppercase" style="letter-spacing: 1px;">Active Case Files • Official Use Only</small>
-    </div>
-    <div class="text-end">
-        <span class="badge bg-dark rounded-0 py-2 px-3"><i class="bi bi-folder-fill me-2"></i>Total Records: {{ total_count|default:0 }}</span>
-    </div>
-</div>
+<div class="container-fluid py-3">
 
-<!-- Filter Panel -->
-<div class="gov-card mb-4">
-    <div class="card-body p-3">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Search Database</label>
-                <input type="text" name="q" class="form-control rounded-0 border-secondary" placeholder="Search URL or business name..." value="{{ search_query }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label text-muted text-uppercase small fw-bold mb-1" style="letter-spacing: 0.5px;">Status Classification</label>
-                <select name="status" class="form-select rounded-0 border-secondary">
-                    <option value="">All Classifications</option>
-                    {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if current_filter == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase" style="letter-spacing: 0.5px;">
-                    <i class="bi bi-funnel me-1"></i>Apply Filter
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
+    <!-- Government Header -->
+    <div class="gov-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
+        <div>
+            <h2 class="mb-0 text-dark fw-bold">Case Repository</h2>
+            <small class="text-muted text-uppercase" style="letter-spacing: 1px;">
+                Active Case Files • Official Use Only
+            </small>
+        </div>
 
-<!-- Data Table -->
-<div class="gov-card">
-    <div class="gov-card-header p-3 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;"><i class="bi bi-list-ul me-2"></i>Case Queue</h6>
+        <div class="text-md-end">
+            <span class="badge bg-dark rounded-0 py-2 px-3">
+                <i class="bi bi-folder-fill me-2" aria-hidden="true"></i>
+                Total Records: {{ total_count|default:0 }}
+            </span>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-gov table-hover align-middle mb-0">
-            <thead>
-                <tr>
-                    <th class="ps-4">Target Entity / URL</th>
-                    <th>Classification Status</th>
-                    <th>Date Imported</th>
-                    <th class="text-end pe-4">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for case in cases %}
-                <tr>
-                    <td class="ps-4">
-                        <div class="fw-bold text-dark">{{ case.business_label|default:"Unidentified Entity" }}</div>
-                        <a href="{{ case.canonical_url }}" target="_blank" class="text-muted small text-decoration-none text-truncate d-inline-block" style="max-width: 450px;">
-                            <i class="bi bi-link-45deg"></i>{{ case.canonical_url }}
-                        </a>
-                    </td>
-                    <td>
-                        {% if case.status == 'NEEDS_TRIAGE' %}
-                            <span class="badge badge-gov bg-warning text-dark border border-warning">NEEDS TRIAGE</span>
-                        {% elif case.status == 'ELIGIBLE' %}
-                            <span class="badge badge-gov bg-info text-dark border border-info">ELIGIBLE</span>
-                        {% elif case.status == 'NOT_ELIGIBLE' %}
-                            <span class="badge badge-gov bg-secondary border border-secondary">NOT ELIGIBLE</span>
-                        {% elif case.status == 'APPROVED' %}
-                            <span class="badge badge-gov bg-primary border border-primary">APPROVED</span>
-                        {% elif case.status == 'REPORT_RECEIVED' %}
-                            <span class="badge badge-gov bg-success border border-success">REPORT RECEIVED</span>
-                        {% elif case.status == 'REMOVED' %}
-                            <span class="badge badge-gov bg-dark border border-dark">REMOVED</span>
-                        {% else %}
-                            <span class="badge badge-gov bg-light text-dark border border-secondary">{{ case.get_status_display|upper }}</span>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        <div class="mb-4" aria-live="polite">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show rounded-0" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Filter Panel -->
+    <div class="gov-card mb-4">
+        <div class="card-body p-3">
+            <form method="get" class="row g-3 align-items-end">
+
+                <!-- Search -->
+                <div class="col-12 col-md-5">
+                    <label
+                        for="case-search"
+                        class="form-label text-muted text-uppercase small fw-bold mb-1"
+                        style="letter-spacing: 0.5px;"
+                    >
+                        Search Database
+                    </label>
+
+                    <input
+                        type="search"
+                        id="case-search"
+                        name="q"
+                        class="form-control rounded-0 border-secondary"
+                        placeholder="Search URL or business name..."
+                        value="{{ search_query|default:'' }}"
+                    >
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-12 col-md-4">
+                    <label
+                        for="case-status"
+                        class="form-label text-muted text-uppercase small fw-bold mb-1"
+                        style="letter-spacing: 0.5px;"
+                    >
+                        Status Classification
+                    </label>
+
+                    <select
+                        id="case-status"
+                        name="status"
+                        class="form-select rounded-0 border-secondary"
+                    >
+                        <option value="">All Classifications</option>
+
+                        {% for value, label in status_choices %}
+                            <option
+                                value="{{ value }}"
+                                {% if current_filter == value %}selected{% endif %}
+                            >
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filter Actions -->
+                <div class="col-12 col-md-3">
+                    <div class="d-grid gap-2">
+                        <button
+                            type="submit"
+                            class="btn btn-dark rounded-0 fw-bold text-uppercase"
+                            style="letter-spacing: 0.5px;"
+                        >
+                            <i class="bi bi-funnel me-1" aria-hidden="true"></i>
+                            Apply Filter
+                        </button>
+
+                        {% if search_query or current_filter %}
+                            <a
+                                href="{% url 'cases:case_list' %}"
+                                class="btn btn-outline-secondary rounded-0 btn-sm"
+                            >
+                                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
+                                Clear Filters
+                            </a>
                         {% endif %}
-                    </td>
-                    <td class="text-muted small text-uppercase">{{ case.created_at|date:"M d, Y" }}</td>
-                    <td class="text-end pe-4">
-                        <a href="{% url 'cases:case_detail' case.pk %}" class="btn btn-sm btn-outline-dark rounded-0 fw-bold px-3">
-                            View File
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
-                        <span class="text-uppercase fw-bold" style="letter-spacing: 1px;">No case files found matching your criteria.</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+
+            </form>
+        </div>
     </div>
-    
-    <!-- Pagination -->
-    <div class="card-footer bg-light border-top pt-3">
-        {% include 'partials/pagination.html' %}
+
+    <!-- Data Table -->
+    <div class="gov-card">
+
+        <!-- Table Header -->
+        <div class="gov-card-header p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+            <h6 class="mb-0 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                <i class="bi bi-list-ul me-2" aria-hidden="true"></i>
+                Case Queue
+            </h6>
+
+            <span class="small text-muted">
+                {% if cases %}
+                    Displaying current results
+                {% else %}
+                    No records to display
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-gov table-hover align-middle mb-0">
+
+                <thead>
+                    <tr>
+                        <th class="ps-4">Target Entity / URL</th>
+                        <th>Classification Status</th>
+                        <th>Date Imported</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for case in cases %}
+                        <tr>
+
+                            <!-- Entity and URL -->
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">
+                                    {{ case.business_label|default:"Unidentified Entity" }}
+                                </div>
+
+                                <a
+                                    href="{{ case.canonical_url }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-muted small text-decoration-none text-truncate d-inline-block"
+                                    style="max-width: min(450px, 65vw);"
+                                    title="{{ case.canonical_url }}"
+                                >
+                                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                    {{ case.canonical_url }}
+                                    <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                                </a>
+
+                                {% if case.source_batch %}
+                                    <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>
+                                        Import: {{ case.source_batch.filename|default:"Import batch" }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td>
+                                {% if case.status == 'NEEDS_TRIAGE' %}
+                                    <span class="badge badge-gov bg-warning text-dark border border-warning">
+                                        NEEDS TRIAGE
+                                    </span>
+
+                                {% elif case.status == 'NOT_ELIGIBLE' %}
+                                    <span class="badge badge-gov bg-secondary border border-secondary">
+                                        NOT ELIGIBLE
+                                    </span>
+
+                                {% elif case.status == 'INSUFFICIENT_EVIDENCE' %}
+                                    <span class="badge badge-gov bg-warning text-dark border border-warning">
+                                        INSUFFICIENT EVIDENCE
+                                    </span>
+
+                                {% elif case.status == 'ELIGIBLE' %}
+                                    <span class="badge badge-gov bg-info text-dark border border-info">
+                                        ELIGIBLE
+                                    </span>
+
+                                {% elif case.status == 'APPROVED' %}
+                                    <span class="badge badge-gov bg-primary border border-primary">
+                                        APPROVED
+                                    </span>
+
+                                {% elif case.status == 'REPORT_RECEIVED' %}
+                                    <span class="badge badge-gov bg-success border border-success">
+                                        REPORT RECEIVED
+                                    </span>
+
+                                {% elif case.status == 'REMOVED' %}
+                                    <span class="badge badge-gov bg-dark border border-dark">
+                                        REMOVED
+                                    </span>
+
+                                {% elif case.status == 'RETAINED' %}
+                                    <span class="badge badge-gov bg-light text-dark border border-secondary">
+                                        RETAINED
+                                    </span>
+
+                                {% else %}
+                                    <span class="badge badge-gov bg-light text-dark border border-secondary">
+                                        {{ case.get_status_display|upper }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Date -->
+                            <td class="text-muted small">
+                                {{ case.created_at|date:"M d, Y" }}
+                                <div class="text-muted" style="font-size: 0.75rem;">
+                                    {{ case.created_at|date:"H:i" }}
+                                </div>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="text-end pe-4">
+                                <a
+                                    href="{% url 'cases:case_detail' case.pk %}"
+                                    class="btn btn-sm btn-outline-dark rounded-0 fw-bold px-3"
+                                    aria-label="View case {{ case.pk }}"
+                                >
+                                    <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>
+                                    View File
+                                </a>
+                            </td>
+
+                        </tr>
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50" aria-hidden="true"></i>
+
+                                <div class="text-uppercase fw-bold" style="letter-spacing: 1px;">
+                                    No case files found matching your criteria.
+                                </div>
+
+                                <p class="small mb-3 mt-2">
+                                    Try changing your search term or status classification.
+                                </p>
+
+                                {% if search_query or current_filter %}
+                                    <a
+                                        href="{% url 'cases:case_list' %}"
+                                        class="btn btn-outline-dark btn-sm rounded-0"
+                                    >
+                                        Clear Filters
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card-footer bg-light border-top pt-3">
+            {% include 'partials/pagination.html' %}
+        </div>
+
     </div>
+
 </div>
 {% endblock %}

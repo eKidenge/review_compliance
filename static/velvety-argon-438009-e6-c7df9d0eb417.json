@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "velvety-argon-438009-e6",
+  "private_key_id": "c7df9d0eb4179ddddc2dbcd5d5f11a93dafaa009",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCvCSajqlun2d6b\ndWl4y87++dX6LEQnWEIexv+vKUs44kkvclAorqrhouUDnmrZ9fV2yPwaOYT42Gzg\ndN3Vzt2Ld+kIqa6x4iJAmFdDsjPaiS7bYPWHyxN7mGzfYVix0h/G097ghu2MbZ2d\neeX/oMORabVpZNDeWj9MLoxLAdrzRz3su+iyvsTrj92isQaXeLq2uD1oEwTrjH4w\nBS05P84W9uMDYKSfYukDq3Rxl7uh2icg6PPqqJtmzjscmb6GQz9Oph2y8czxxUlo\nhG3eJ5h20GIN1DEDaSJzowoAxmNiWsnWcOy0zmpPenvQFKh0oayb5lnrYyrYDXvv\nGmO1ccjrAgMBAAECggEAChCcJLAgmhvIlabgPD539ih2me6esqZ8Etn9jNxyg2Bb\ntfs8ScKVd+kOgzFCUqs2hLCU8osZLtf/Fr8RnIBLNABeqY1cSsVGk/FOn0lpeukF\nhT7jj33pbmN66zNlTsBW7G91cvK/SSJqfEospBDh/gQWluthqU+GMULB9XQzW2bG\neUm0ailu5GuSydmYHDBO5OA10MtHxh1wAn2ptuiYawDjgTJz4Xq4slltpEtr3BI7\nP1QaR+69qhd+FXLn4ZGph0NkimJC4g4l5DA7JxZrOhN+SiIBcXfmMCmDHHE7RLRJ\nAo93viIyU8qw+/Iyvy/gMc03ZVH/M5HSRMhyORcMJQKBgQDaIPWT2i7p2wtXGZCb\nqGLhJkhNsgfdilWpf99hUYisD9H03RtOLXowbIyN/YpVg7NL9OP4kpHkBlfe08hg\n0BWDiccTF1sAG9/OF8r+Fu5kFBvCql4pzuBlEC8Y+0ne3o1XokxA+YLy31tQC/lM\n5XMiMREYn2huyviE5kJZmw2MbQKBgQDNbNy8LcrZv/QFXnk9rBxDhmBVRLoswOGi\n3XrvSuiH6yK40UHm3zzpBUwTReN5g0L9+5gumJaXQa2/KawD6Gk8IXehBfu6cETL\nE/w5YJumaLPZu68ek08w75UBbhPjhX9GvOzGy6LuWlkzIJVQzMmRib94N4oRkogn\nZQve7h2jtwKBgBb+1ITiwoFa20YyZsFSLiJoQ8UVGKktVTyKQ4Vh8BObk1nKGX/T\nYYdLWkH50aSUPsmqJoJlCUZNuOO/1ecG6M22L6t+kdRgG+cBMSA6UKVyTT7ncQfd\nTGC7JQvwKeh589KiRIGxDDIIg/rbWEvYAJxBKfk7jOnpMevozmPd6b69AoGBALK8\n+ObnNSv3v9v4EqfdnA4I2sL2dMNB5FGwQin5VJAGwIRs1tmJ/daGnGXclouA8YZK\nJmTMsaLUK9g76wbPbtk6CXva1+eljcXhEsHd1DCbw3k8u6dv5ySeIVlILRf3bQHg\nmmhygMbBaAF7ZVATj4MJhsaUFJcrlzonyodjSfjLAoGAfd5zP3jEqbCmHLxqcdCy\n1J6qdIWtcKTy6n20l8Eoc9bBocoZ2S7fJB69bH6a3BW6n8bxvnh6HTlq57aTWjxZ\ncJ5tZrVxNphMQwZLtlTaNesW1XKrcu2unSmGAgWRBroH5VKyJvkGOYQKhGtp0iwC\nC95rGK4ztaMWo5kJmtwHv2Y=\n-----END PRIVATE KEY-----\n",
+  "client_email": "review-compliance-sync@velvety-argon-438009-e6.iam.gserviceaccount.com",
+  "client_id": "107777157976473996331",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/review-compliance-sync%40velvety-argon-438009-e6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
