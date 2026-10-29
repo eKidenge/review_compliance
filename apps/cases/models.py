@@ -115,10 +115,8 @@ class ReviewCase(models.Model):
     def google_report_url(self):
         """
         Generates the direct Google Support link to report a review.
-        This pre-fills the business/review context for the user.
         """
-        # Google's official review reporting tool URL
-        return "https://support.google.com/business/troubleshoot?hl=en&sjid=123456789#zippy=%2Creport-a-review"
+        return "https://support.google.com/business/answer/3038177?hl=en#zippy=%2Creport-a-review"
 
 
 class PolicyAssessment(models.Model):
