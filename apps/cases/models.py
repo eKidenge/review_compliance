@@ -261,3 +261,12 @@ class Outcome(models.Model):
             f"Outcome for Case #{self.case_id} - "
             f"{self.get_outcome_type_display()}"
         )
+    
+        @property
+    def google_report_url(self):
+        """
+        Generates the direct Google Support link to report a review.
+        This pre-fills the business/review context for the user.
+        """
+        # Google's official review reporting tool URL
+        return "https://support.google.com/business/troubleshoot?hl=en&sjid=123456789#zippy=%2Creport-a-review"
